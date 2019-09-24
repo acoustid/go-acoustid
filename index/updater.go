@@ -3,11 +3,13 @@ package index
 import (
 	"context"
 	"database/sql"
-	"log"
 	"time"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/lib/pq"
 )
+
+const UpdateBatchSize = 1000
 
 type FingerprintStore struct {
 	db *sql.DB
@@ -19,8 +21,8 @@ func NewFingerprintStore(db *sql.DB) *FingerprintStore {
 	}
 }
 
-func (s *FingerprintStore) GetMaxID() (int, error) {
-	row := s.db.QueryRow("SELECT max(id) FROM fingerprint")
+func (s *FingerprintStore) GetMaxID(ctx context.Context) (int, error) {
+	row := s.db.QueryRowContext(ctx, "SELECT max(id) FROM fingerprint")
 	var id int
 	err := row.Scan(&id)
 	if err != nil {
@@ -32,8 +34,8 @@ func (s *FingerprintStore) GetMaxID() (int, error) {
 	return id, nil
 }
 
-func (s *FingerprintStore) GetNextFingerprints(lastID uint32, limit int) ([]FingerprintInfo, error) {
-	rows, err := s.db.Query("SELECT id, acoustid_extract_query(fingerprint) FROM fingerprint WHERE id > $1 ORDER BY id LIMIT $2", lastID, limit)
+func (s *FingerprintStore) GetNextFingerprints(ctx context.Context, lastID uint32, limit int) ([]FingerprintInfo, error) {
+	rows, err := s.db.QueryContext(ctx, "SELECT id, acoustid_extract_query(fingerprint) FROM fingerprint WHERE id > $1 ORDER BY id LIMIT $2", lastID, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -47,12 +49,17 @@ func (s *FingerprintStore) GetNextFingerprints(lastID uint32, limit int) ([]Fing
 		}
 		fingerprints = append(fingerprints, FingerprintInfo{ID: id, Hashes: hashes})
 	}
+	err = rows.Close()
+	if err != nil {
+		return nil, err
+	}
 	return fingerprints, nil
 }
 
 type UpdaterConfig struct {
 	Database *DatabaseConfig
 	Index    *IndexConfig
+	Debug bool
 }
 
 func NewUpdaterConfig() *UpdaterConfig {
@@ -64,6 +71,12 @@ func NewUpdaterConfig() *UpdaterConfig {
 
 func main() {
 	cfg := NewUpdaterConfig()
+
+	if cfg.Debug {
+		log.SetLevel(log.DebugLevel)
+	} else {
+		log.SetLevel(log.InfoLevel)
+	}
 
 	db, err := sql.Open("postgres", cfg.Database.URL().String())
 	if err != nil {
@@ -87,11 +100,17 @@ func main() {
 		if err != nil {
 			log.Fatalf("Failed to get the last fingerprint ID in index: %s", err)
 		}
-		log.Printf("Last fingerprint in index = %d", lastID)
 
-		fingerprints, err := fp.GetNextFingerprints(lastID+1, 1000)
+		fingerprints, err := fp.GetNextFingerprints(ctx, lastID, UpdateBatchSize)
 		idx.Insert(ctx, fingerprints)
 
-		time.Sleep(100 * time.Millisecond)
+		fingerprintCount := len(fingerprints)
+		log.Infof("Added %d fingerprints up to ID %d", fingerprintCount, fingerprints[fingerprintCount-1].ID)
+
+		if fingerprintCount == 0 {
+			delay := 100 * time.Millisecond
+			time.Sleep(delay)
+			log.Debugf("Sleeping for %v", delay)
+		}
 	}
 }
