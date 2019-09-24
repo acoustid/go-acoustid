@@ -23,13 +23,17 @@ jobs:
     - name: Test
       run: go test -v ./...
 
-    - name: Build
+    - name: Build binaries
       run: ./build.sh
 
-    - uses: actions/upload-artifact@v1
+    - name: Upload aindex binary
+      uses: actions/upload-artifact@v1
       with:
         name: aindex-linux-amd64
         path: aindex-linux-amd64
 
-    - name: Build Docker image for index
+    - name: Build Docker image for aindex
       run: docker build . -f Dockerfile.index -t docker.pkg.github.com/acoustid/go-acoustid/index:$GITHUB_SHA
+
+    - name: Publish Docker image for aindex
+      run: docker push docker.pkg.github.com/acoustid/go-acoustid/index:$GITHUB_SHA
