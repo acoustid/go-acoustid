@@ -3,4 +3,4 @@
 set -ex
 
 go build ./index
-go build ./index/cmd/aindex-update
+go build ./index/cmd/aindex

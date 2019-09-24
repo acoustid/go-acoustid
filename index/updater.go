@@ -69,9 +69,7 @@ func NewUpdaterConfig() *UpdaterConfig {
 	}
 }
 
-func RunUpdater() {
-	cfg := NewUpdaterConfig()
-
+func RunUpdater(cfg *UpdaterConfig) {
 	if cfg.Debug {
 		log.SetLevel(log.DebugLevel)
 	} else {
