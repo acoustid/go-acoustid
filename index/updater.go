@@ -82,11 +82,11 @@ func RunUpdater(cfg *UpdaterConfig) {
 	}
 	defer db.Close()
 
-	idx, err := ConnectWithConfig(cfg.Index)
+	idx, err := ConnectWithConfig(context.Background(), cfg.Index)
 	if err != nil {
 		log.Fatalf("Failed to connect to index: %s", err)
 	}
-	defer idx.Close()
+	defer idx.Close(context.Background())
 
 	fp := NewFingerprintStore(db)
 
@@ -94,13 +94,13 @@ func RunUpdater(cfg *UpdaterConfig) {
 		ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 		defer cancel()
 
-		lastID, err := idx.GetLastFingerprintID(ctx)
+		lastID, err := GetLastFingerprintID(ctx, idx)
 		if err != nil {
 			log.Fatalf("Failed to get the last fingerprint ID in index: %s", err)
 		}
 
 		fingerprints, err := fp.GetNextFingerprints(ctx, lastID, UpdateBatchSize)
-		idx.Insert(ctx, fingerprints)
+		MultiInsert(ctx, idx, fingerprints)
 
 		fingerprintCount := len(fingerprints)
 		log.Infof("Added %d fingerprints up to ID %d", fingerprintCount, fingerprints[fingerprintCount-1].ID)

@@ -89,14 +89,14 @@ func TestIndexClient(t *testing.T) {
 	var fingerprints []FingerprintInfo
 	fingerprints = append(fingerprints, FingerprintInfo{ID: 1, Hashes: []uint32{100, 200, 300}})
 	fingerprints = append(fingerprints, FingerprintInfo{ID: 2, Hashes: []uint32{400, 500, 600}})
-	err = idx.Insert(ctx, fingerprints)
-	assert.Nil(t, err, "got error from idx.BatchInsert()")
+	err = MultiInsert(ctx, idx, fingerprints)
+	assert.Nil(t, err, "got error from MultiInsert()")
 
-	id, err := idx.GetLastFingerprintID(ctx)
-	assert.Nil(t, err, "got error from idx.GetAttribute()")
+	id, err := GetLastFingerprintID(ctx, idx)
+	assert.Nil(t, err, "got error from GetLastFingerprintID()")
 	assert.Equal(t, id, uint32(2))
 
-	idx.Close()
+	idx.Close(ctx)
 	server.Close()
 
 	wg.Wait()

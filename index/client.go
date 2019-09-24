@@ -13,6 +13,8 @@ import (
 const kPrefixOK = "OK "
 const kPrefixERR = "ERR "
 
+var ErrClientNotOK = errors.New("index client connection is in error state")
+
 var ErrTxDone = errors.New("transaction already closed")
 var ErrTxActive = errors.New("another transaction is still active")
 
@@ -25,62 +27,6 @@ func EncodeFingerprint(hashes []uint32) string {
 		b.WriteString(strconv.FormatUint(uint64(hash), 10))
 	}
 	return b.String()
-}
-
-type IndexClient struct {
-	conn        net.Conn
-	buf         *bufio.ReadWriter
-	closed      bool
-	hasError    bool
-	hasDeadline bool
-	tx          *IndexClientTx
-}
-
-type FingerprintInfo struct {
-	ID     uint32
-	Hashes []uint32
-}
-
-func NewIndexClient(conn net.Conn) *IndexClient {
-	reader := bufio.NewReader(conn)
-	writer := bufio.NewWriter(conn)
-	buf := bufio.NewReadWriter(reader, writer)
-	return &IndexClient{conn: conn, buf: buf}
-}
-
-func Connect(host string, port int) (*IndexClient, error) {
-	conn, err := net.Dial("tcp", net.JoinHostPort(host, strconv.Itoa(port)))
-	if err != nil {
-		return nil, err
-	}
-	return NewIndexClient(conn), nil
-}
-
-func ConnectWithConfig(cfg *IndexConfig) (*IndexClient, error) {
-	return Connect(cfg.Host, cfg.Port)
-}
-
-func (c *IndexClient) IsOK() bool {
-	return !c.closed && !c.hasError
-}
-
-func (c *IndexClient) Close() error {
-	if c.closed {
-		return nil
-	}
-
-	if c.tx != nil {
-		err := c.tx.Rollback(context.Background())
-		if err != nil {
-			return err
-		}
-	}
-
-	err := c.conn.Close()
-	if err == nil {
-		c.closed = true
-	}
-	return err
 }
 
 func WriteLine(writer *bufio.Writer, line string) error {
@@ -101,6 +47,58 @@ func ReadLine(reader *bufio.Reader) (string, error) {
 		return "", err
 	}
 	return strings.TrimRight(line, "\r\n"), nil
+}
+
+type IndexClient struct {
+	conn        net.Conn
+	buf         *bufio.ReadWriter
+	closed      bool
+	hasError    bool
+	hasDeadline bool
+	tx          *IndexClientTx
+}
+
+func NewIndexClient(conn net.Conn) *IndexClient {
+	reader := bufio.NewReader(conn)
+	writer := bufio.NewWriter(conn)
+	buf := bufio.NewReadWriter(reader, writer)
+	return &IndexClient{conn: conn, buf: buf}
+}
+
+func Connect(ctx context.Context, host string, port int) (*IndexClient, error) {
+	var d net.Dialer
+	conn, err := d.DialContext(ctx, "tcp", net.JoinHostPort(host, strconv.Itoa(port)))
+	if err != nil {
+		return nil, err
+	}
+	return NewIndexClient(conn), nil
+}
+
+func ConnectWithConfig(ctx context.Context, config *IndexConfig) (*IndexClient, error) {
+	return Connect(ctx, config.Host, config.Port)
+}
+
+func (c *IndexClient) IsOK() bool {
+	return !c.closed && !c.hasError
+}
+
+func (c *IndexClient) Close(ctx context.Context) error {
+	if c.closed {
+		return nil
+	}
+
+	if c.tx != nil {
+		err := c.tx.Rollback(ctx)
+		if err != nil {
+			return err
+		}
+	}
+
+	err := c.conn.Close()
+	if err == nil {
+		c.closed = true
+	}
+	return err
 }
 
 func (c *IndexClient) sendRequest(ctx context.Context, request string) (string, error) {
@@ -146,21 +144,6 @@ func (c *IndexClient) Ping(ctx context.Context) error {
 	return err
 }
 
-func (c *IndexClient) GetLastFingerprintID(ctx context.Context) (uint32, error) {
-	strValue, err := c.GetAttribute(ctx, "max_document_id")
-	if err != nil {
-		return 0, err
-	}
-	if strValue == "" {
-		return 0, nil
-	}
-	value, err := strconv.ParseUint(strValue, 10, 32)
-	if err != nil {
-		return 0, err
-	}
-	return uint32(value), nil
-}
-
 func (c *IndexClient) GetAttribute(ctx context.Context, name string) (string, error) {
 	return c.sendRequest(ctx, fmt.Sprintf("get attribute %s", name))
 }
@@ -170,7 +153,7 @@ func (c *IndexClient) SetAttribute(ctx context.Context, name string, value strin
 	return err
 }
 
-func (c *IndexClient) BeginTx(ctx context.Context) (*IndexClientTx, error) {
+func (c *IndexClient) BeginTx(ctx context.Context) (Tx, error) {
 	if c.tx != nil {
 		return nil, ErrTxActive
 	}
@@ -180,23 +163,6 @@ func (c *IndexClient) BeginTx(ctx context.Context) (*IndexClientTx, error) {
 		return nil, err
 	}
 	return tx, nil
-}
-
-func (c *IndexClient) Insert(ctx context.Context, fingerprints []FingerprintInfo) error {
-	tx, err := c.BeginTx(ctx)
-	if err != nil {
-		return err
-	}
-
-	for _, fingerprint := range fingerprints {
-		err = tx.Insert(ctx, fingerprint.ID, fingerprint.Hashes)
-		if err != nil {
-			tx.Rollback(ctx)
-			return err
-		}
-	}
-
-	return tx.Commit(ctx)
 }
 
 type IndexClientTx struct {
