@@ -4,8 +4,9 @@
 package vfs
 
 import (
-	"github.com/pkg/errors"
 	"io"
+
+	"github.com/pkg/errors"
 )
 
 // WriteFile atomically writes the result of the write function to a file.

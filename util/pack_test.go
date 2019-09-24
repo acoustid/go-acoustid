@@ -5,10 +5,11 @@ package util
 
 import (
 	"fmt"
-	"github.com/stretchr/testify/require"
 	"math/big"
 	"math/rand"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestPackUnpack(t *testing.T) {

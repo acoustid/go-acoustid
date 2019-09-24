@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/jolestar/go-commons-pool"
+	pool "github.com/jolestar/go-commons-pool"
 )
 
 type IndexClientFactory struct {

@@ -4,12 +4,13 @@
 package chromaprint
 
 import (
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"io/ioutil"
 	"path"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func loadTestFingerprint(t *testing.T, name string) *Fingerprint {

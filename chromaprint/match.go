@@ -4,13 +4,14 @@
 package chromaprint
 
 import (
+	"math"
+	"sort"
+	"time"
+
 	"github.com/acoustid/go-acoustid/util"
 	"github.com/acoustid/go-acoustid/util/signal"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
-	"math"
-	"sort"
-	"time"
 )
 
 const NumQueryBits = 26

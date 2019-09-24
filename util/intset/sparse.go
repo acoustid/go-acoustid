@@ -5,10 +5,11 @@ package intset
 
 import (
 	"encoding/binary"
-	"github.com/acoustid/go-acoustid/util"
-	"go4.org/sort"
 	"io"
 	"math"
+
+	"github.com/acoustid/go-acoustid/util"
+	"go4.org/sort"
 )
 
 const (

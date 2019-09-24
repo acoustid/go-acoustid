@@ -3,12 +3,13 @@ package chromaprint
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/pkg/errors"
 	"math"
 	"os/exec"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/pkg/errors"
 )
 
 type FingerprintResult struct {

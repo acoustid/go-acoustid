@@ -5,9 +5,10 @@
 package vfs
 
 import (
-	"github.com/pkg/errors"
 	"io"
 	"os"
+
+	"github.com/pkg/errors"
 )
 
 type InputFile interface {
