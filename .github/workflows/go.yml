@@ -20,8 +20,8 @@ jobs:
       run: |
         go mod download
 
-    - name: Build
-      run: go build -v ./...
-
     - name: Test
       run: go test -v ./...
+
+    - name: Build
+      run: ./build.sh

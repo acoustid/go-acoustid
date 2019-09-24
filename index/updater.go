@@ -69,7 +69,7 @@ func NewUpdaterConfig() *UpdaterConfig {
 	}
 }
 
-func main() {
+func RunUpdater() {
 	cfg := NewUpdaterConfig()
 
 	if cfg.Debug {
