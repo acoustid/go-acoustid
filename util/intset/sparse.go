@@ -7,9 +7,9 @@ import (
 	"encoding/binary"
 	"io"
 	"math"
+	"sort"
 
 	"github.com/acoustid/go-acoustid/util"
-	"go4.org/sort"
 )
 
 const (
