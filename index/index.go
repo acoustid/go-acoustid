@@ -5,11 +5,6 @@ import (
 	"strconv"
 )
 
-type FingerprintInfo struct {
-	ID     uint32
-	Hashes []uint32
-}
-
 type Index interface {
 	IsOK() bool
 	Close(ctx context.Context) error
@@ -22,6 +17,11 @@ type Tx interface {
 	Insert(ctx context.Context, id uint32, hashes []uint32) error
 	Commit(ctx context.Context) error
 	Rollback(ctx context.Context) error
+}
+
+type FingerprintInfo struct {
+	ID     uint32
+	Hashes []uint32
 }
 
 func MultiInsert(ctx context.Context, idx Index, fingerprints []FingerprintInfo) error {

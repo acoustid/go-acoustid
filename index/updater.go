@@ -78,9 +78,14 @@ func RunUpdater(cfg *UpdaterConfig) {
 
 	db, err := sql.Open("postgres", cfg.Database.URL().String())
 	if err != nil {
-		log.Fatalf("Failed to connect to database: %s", err)
+		log.Fatalf("Failed to connect to database: %v", err)
 	}
 	defer db.Close()
+
+	err = db.Ping()
+	if err != nil {
+		log.Fatalf("Can't ping the database: %v", err)
+	}
 
 	idx, err := ConnectWithConfig(context.Background(), cfg.Index)
 	if err != nil {
@@ -89,6 +94,8 @@ func RunUpdater(cfg *UpdaterConfig) {
 	defer idx.Close(context.Background())
 
 	fp := NewFingerprintStore(db)
+
+	var delay time.Duration
 
 	for {
 		ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
@@ -106,9 +113,15 @@ func RunUpdater(cfg *UpdaterConfig) {
 		log.Infof("Added %d fingerprints up to ID %d", fingerprintCount, fingerprints[fingerprintCount-1].ID)
 
 		if fingerprintCount == 0 {
-			delay := 100 * time.Millisecond
-			time.Sleep(delay)
+			if delay < time.Second {
+				delay += 10 * time.Millisecond
+			}
+		} else {
+			delay = 0
+		}
+		if delay > 0 {
 			log.Debugf("Sleeping for %v", delay)
+			time.Sleep(delay)
 		}
 	}
 }
