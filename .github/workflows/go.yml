@@ -21,7 +21,7 @@ jobs:
         go mod download
 
     - name: Test
-      run: go test -v ./...
+      run: go test -v -covermode=count -coverprofile=coverage.out ./...
 
     - name: Build binaries
       run: ./build.sh
@@ -34,6 +34,3 @@ jobs:
 
     - name: Build Docker image for aindex
       run: docker build . -f Dockerfile.index -t docker.pkg.github.com/acoustid/go-acoustid/index:$GITHUB_SHA
-
-#    - name: Publish Docker image for aindex
-#      run: docker push docker.pkg.github.com/acoustid/go-acoustid/index:$GITHUB_SHA

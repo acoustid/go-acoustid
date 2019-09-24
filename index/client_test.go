@@ -5,20 +5,27 @@ import (
 	"context"
 	"net"
 	"testing"
+	"sync"
+	"io"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func MockIndexServer(t *testing.T, conn net.Conn, responses map[string]string) {
-	defer conn.Close()
+func MockIndexServer(t *testing.T, wg *sync.WaitGroup, conn net.Conn, responses map[string]string) {
+	wg.Add(1)
 
 	reader := bufio.NewReader(conn)
 	writer := bufio.NewWriter(conn)
 
 	for {
 		request, err := ReadLine(reader)
-		require.Nil(t, err)
+		if err != nil {
+			if err == io.EOF || err == io.ErrClosedPipe {
+				break
+			}
+			require.Nil(t, err)
+		}
 
 		response, exists := responses[request]
 		if exists {
@@ -27,13 +34,14 @@ func MockIndexServer(t *testing.T, conn net.Conn, responses map[string]string) {
 			require.Fail(t, "received unknown request: %v", request)
 		}
 	}
+
+	wg.Done()
 }
 
 func TestIndexClient(t *testing.T) {
 	server, client := net.Pipe()
 
 	idx := NewIndexClient(client)
-	defer idx.Close()
 
 	responses := map[string]string{
 		"echo":                          "OK ",
@@ -47,7 +55,9 @@ func TestIndexClient(t *testing.T) {
 		"get attribute max_document_id": "OK 2",
 	}
 
-	go MockIndexServer(t, server, responses)
+	var wg sync.WaitGroup
+
+	go MockIndexServer(t, &wg, server, responses)
 
 	ctx := context.Background()
 
@@ -85,4 +95,9 @@ func TestIndexClient(t *testing.T) {
 	id, err := idx.GetLastFingerprintID(ctx)
 	assert.Nil(t, err, "got error from idx.GetAttribute()")
 	assert.Equal(t, id, uint32(2))
+
+	idx.Close()
+	server.Close()
+
+	wg.Wait()
 }
