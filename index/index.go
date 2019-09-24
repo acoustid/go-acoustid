@@ -1,8 +1,8 @@
 package index
 
 import (
-	"strconv"
 	"context"
+	"strconv"
 )
 
 type FingerprintInfo struct {

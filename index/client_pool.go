@@ -59,6 +59,6 @@ func NewIndexClientPool(config *IndexConfig, limit int) *pool.ObjectPool {
 	poolConfig.MaxTotal = limit
 	poolConfig.MaxIdle = limit
 	poolConfig.TestWhileIdle = true
-	poolConfig.TimeBetweenEvictionRuns = 10*time.Second
+	poolConfig.TimeBetweenEvictionRuns = 10 * time.Second
 	return pool.NewObjectPool(ctx, factory, poolConfig)
 }

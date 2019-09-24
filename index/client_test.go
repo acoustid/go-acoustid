@@ -3,10 +3,10 @@ package index
 import (
 	"bufio"
 	"context"
-	"net"
-	"testing"
-	"sync"
 	"io"
+	"net"
+	"sync"
+	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

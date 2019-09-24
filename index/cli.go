@@ -3,48 +3,48 @@ package index
 import (
 	"os"
 
-	"github.com/urfave/cli"
 	log "github.com/sirupsen/logrus"
+	"github.com/urfave/cli"
 )
 
 var DebugFlag = cli.BoolFlag{
-	Name: "debug, d",
-	Usage: "enable debug mode",
+	Name:   "debug, d",
+	Usage:  "enable debug mode",
 	EnvVar: "ACOUSTID_DEBUG",
 }
 
 var IndexHostFlag = cli.StringFlag{
-	Name: "index-host",
-	Usage: "index server hostname",
-	Value: "localhost",
+	Name:   "index-host",
+	Usage:  "index server hostname",
+	Value:  "localhost",
 	EnvVar: "ACOUSTID_INDEX_HOST",
 }
 
 var IndexPortFlag = cli.IntFlag{
-	Name: "index-port",
-	Usage: "index server port number",
-	Value: 6080,
+	Name:   "index-port",
+	Usage:  "index server port number",
+	Value:  6080,
 	EnvVar: "ACOUSTID_INDEX_PORT",
 }
 
 var DatabaseNameFlag = cli.StringFlag{
-	Name: "database-name",
-	Usage: "database name",
-	Value: "acoustid",
+	Name:   "database-name",
+	Usage:  "database name",
+	Value:  "acoustid",
 	EnvVar: "ACOUSTID_DATABASE_NAME",
 }
 
 var DatabaseHostFlag = cli.StringFlag{
-	Name: "database-host",
-	Usage: "database server hostname",
-	Value: "localhost",
+	Name:   "database-host",
+	Usage:  "database server hostname",
+	Value:  "localhost",
 	EnvVar: "ACOUSTID_DATABASE_HOST",
 }
 
 var DatabasePortFlag = cli.IntFlag{
-	Name: "database-port",
-	Usage: "database server port",
-	Value: 5432,
+	Name:   "database-port",
+	Usage:  "database server port",
+	Value:  5432,
 	EnvVar: "ACOUSTID_DATABASE_PORT",
 }
 
@@ -73,7 +73,7 @@ func CreateApp() *cli.App {
 	}
 	app.Commands = []cli.Command{
 		{
-			Name: "updater",
+			Name:  "updater",
 			Usage: "Runs AcoustID index updater",
 			Flags: []cli.Flag{
 				IndexHostFlag,

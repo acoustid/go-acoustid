@@ -5,8 +5,8 @@ import (
 	"database/sql"
 	"time"
 
-	log "github.com/sirupsen/logrus"
 	"github.com/lib/pq"
+	log "github.com/sirupsen/logrus"
 )
 
 const UpdateBatchSize = 1000
@@ -59,7 +59,7 @@ func (s *FingerprintStore) GetNextFingerprints(ctx context.Context, lastID uint3
 type UpdaterConfig struct {
 	Database *DatabaseConfig
 	Index    *IndexConfig
-	Debug bool
+	Debug    bool
 }
 
 func NewUpdaterConfig() *UpdaterConfig {
