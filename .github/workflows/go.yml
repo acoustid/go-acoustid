@@ -35,5 +35,5 @@ jobs:
     - name: Build Docker image for aindex
       run: docker build . -f Dockerfile.index -t docker.pkg.github.com/acoustid/go-acoustid/index:$GITHUB_SHA
 
-    - name: Publish Docker image for aindex
-      run: docker push docker.pkg.github.com/acoustid/go-acoustid/index:$GITHUB_SHA
+#    - name: Publish Docker image for aindex
+#      run: docker push docker.pkg.github.com/acoustid/go-acoustid/index:$GITHUB_SHA
