@@ -25,3 +25,11 @@ jobs:
 
     - name: Build
       run: ./build.sh
+
+    - uses: actions/upload-artifact@v1
+      with:
+        name: aindex-linux-amd64
+        path: aindex-linux-amd64
+
+    - name: Build Docker image for index
+      run: docker build . -f Dockerfile.index -t docker.pkg.github.com/acoustid/go-acoustid/index:$GITHUB_SHA
