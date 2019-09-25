@@ -32,5 +32,17 @@ jobs:
         name: aindex-linux-amd64
         path: aindex-linux-amd64
 
-    - name: Build Docker image for aindex
-      run: docker build . -f Dockerfile.index -t docker.pkg.github.com/acoustid/go-acoustid/index:$GITHUB_SHA
+    - name: Build Docker image for index and index-updater
+      if: github.ref == 'refs/heads/master'
+      run: |
+        docker build . -f Dockerfile.index -t quay.io/acoustid/acoustid-index:master
+        docker build . -f Dockerfile.index-updater -t quay.io/acoustid-updater/acoustid-index-updater:master
+
+    - name: Push Docker image for index-updater
+      if: github.ref == 'refs/heads/master'
+      run: |
+        docker login quay.io --username $QUAY_USERNAME --password $QUAY_PASSWORD
+        docker push quay.io/acoustid-updater/acoustid-index-updater:master
+      env:
+        QUAY_USERNAME: ${{ secrets.QUAY_USERNAME }}
+        QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
