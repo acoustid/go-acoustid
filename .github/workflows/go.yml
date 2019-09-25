@@ -1,9 +1,9 @@
-name: Go
+name: Build
 on: [push]
 jobs:
 
   build:
-    name: Build
+    name: Test and build
     runs-on: ubuntu-latest
     steps:
 
@@ -32,6 +32,18 @@ jobs:
         name: aindex-linux-amd64
         path: aindex-linux-amd64
 
+  docker:
+    name: Build Docker images
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+
+    - name: Download aindex binary
+      uses: actions/download-artifact@v1
+      with:
+        name: aindex-linux-amd64
+      if: github.ref == 'refs/heads/master'
+
     - name: Build Docker image for index and index-updater
       run: |
         docker build . -f Dockerfile.index -t quay.io/acoustid/acoustid-index:master
@@ -45,13 +57,4 @@ jobs:
       env:
         QUAY_USERNAME: ${{ secrets.QUAY_USERNAME }}
         QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
-      if: github.ref == 'refs/heads/master'
-
-    - name: Log in to registry
-      run: |
-        echo "$DOCKER_PASSWORD" | docker login docker.pkg.github.com --username "$DOCKER_USERNAME" --password-stdin
-      env:
-        DOCKER_REGISTRY_URL: docker.pkg.github.com
-        DOCKER_USERNAME: ${{ github.actor }}
-        DOCKER_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
       if: github.ref == 'refs/heads/master'
