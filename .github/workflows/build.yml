@@ -16,15 +16,11 @@ jobs:
     - name: Check out code
       uses: actions/checkout@v1
 
-    - name: Get dependencies
-      run: |
-        go mod download
-
     - name: Test
-      run: go test -v -covermode=count -coverprofile=coverage.out ./...
+      run: ./ci/test.sh
 
     - name: Build binaries
-      run: ./build.sh
+      run: ./ci/build.sh
 
     - name: Upload aindex binary
       uses: actions/upload-artifact@v1
@@ -40,24 +36,21 @@ jobs:
 
     - name: Check out code
       uses: actions/checkout@v1
+      if: github.ref == 'refs/heads/master' || startsWith(github.ref, 'ref/tags/')
 
     - name: Download aindex binary
       uses: actions/download-artifact@v1
       with:
         name: aindex-linux-amd64
-      if: github.ref == 'refs/heads/master'
+      if: github.ref == 'refs/heads/master' || startsWith(github.ref, 'ref/tags/')
 
-    - name: Build Docker image for index and index-updater
-      run: |
-        docker build . -f Dockerfile.index -t quay.io/acoustid/acoustid-index:master
-        docker build . -f Dockerfile.index-updater -t quay.io/acoustid/acoustid-index-updater:master
-      if: github.ref == 'refs/heads/master'
+    - name: Build Docker images
+      run: ./ci/build-images.sh
+      if: github.ref == 'refs/heads/master' || startsWith(github.ref, 'ref/tags/')
 
-    - name: Push Docker image for index-updater
-      run: |
-        echo "$QUAY_PASSWORD" | docker login quay.io --username "$QUAY_USERNAME" --password-stdin
-        docker push quay.io/acoustid/acoustid-index-updater:master
+    - name: Push Docker images
+      run: ./ci/push-images.sh
       env:
         QUAY_USERNAME: ${{ secrets.QUAY_USERNAME }}
         QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
-      if: github.ref == 'refs/heads/master'
+      if: github.ref == 'refs/heads/master' || startsWith(github.ref, 'ref/tags/')
