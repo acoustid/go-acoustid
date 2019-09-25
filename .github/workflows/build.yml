@@ -7,13 +7,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
 
-    - name: Set up Go 1.13
+    - name: Set up Go
       uses: actions/setup-go@v1
       with:
         go-version: 1.13
       id: go
 
-    - name: Check out code into the Go module directory
+    - name: Check out code
       uses: actions/checkout@v1
 
     - name: Get dependencies
@@ -37,6 +37,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
     steps:
+
+    - name: Check out code
+      uses: actions/checkout@v1
 
     - name: Download aindex binary
       uses: actions/download-artifact@v1
