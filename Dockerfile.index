@@ -1,5 +1,6 @@
 FROM scratch
 
 COPY aindex-linux-amd64 /aindex
+RUN chomd +x /aindex
 
 CMD ["/aindex"]
