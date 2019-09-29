@@ -43,7 +43,7 @@ func (cfg *DatabaseConfig) URL() *url.URL {
 	u.User = url.UserPassword(cfg.Username, cfg.Password)
 	u.Host = net.JoinHostPort(cfg.Host, strconv.Itoa(cfg.Port))
 	u.Path = fmt.Sprintf("/%s", cfg.Name)
-	var params url.Values
+	params := url.Values{}
 	params.Add("sslmode", "disable")
 	u.RawQuery = params.Encode()
 	return &u
