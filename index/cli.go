@@ -48,6 +48,20 @@ var DatabasePortFlag = cli.IntFlag{
 	EnvVar: "ACOUSTID_DATABASE_PORT",
 }
 
+var DatabaseUsernameFlag = cli.StringFlag{
+	Name:   "database-username",
+	Usage:  "database user name",
+	Value:  "acoustid",
+	EnvVar: "ACOUSTID_DATABASE_USERNAME",
+}
+
+var DatabasePasswordFlag = cli.StringFlag{
+	Name:   "database-password",
+	Usage:  "database user password",
+	Value:  "",
+	EnvVar: "ACOUSTID_DATABASE_PASSWORD",
+}
+
 func PrepareAndRunUpdater(c *cli.Context) error {
 	cfg := NewUpdaterConfig()
 
@@ -59,6 +73,8 @@ func PrepareAndRunUpdater(c *cli.Context) error {
 	cfg.Database.Name = c.String("database-name")
 	cfg.Database.Host = c.String("database-host")
 	cfg.Database.Port = c.Int("database-port")
+	cfg.Database.Username = c.String("database-username")
+	cfg.Database.Password = c.String("database-password")
 
 	RunUpdater(cfg)
 	return nil
@@ -81,6 +97,8 @@ func CreateApp() *cli.App {
 				DatabaseNameFlag,
 				DatabaseHostFlag,
 				DatabasePortFlag,
+				DatabaseUsernameFlag,
+				DatabasePasswordFlag,
 			},
 			Action: PrepareAndRunUpdater,
 		},

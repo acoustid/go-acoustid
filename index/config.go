@@ -23,7 +23,7 @@ type DatabaseConfig struct {
 	Name     string
 	Host     string
 	Port     int
-	User     string
+	Username string
 	Password string
 }
 
@@ -32,7 +32,7 @@ func NewDatabaseConfig() *DatabaseConfig {
 		Name:     "acoustid",
 		Host:     "localhost",
 		Port:     5432,
-		User:     "acoustid",
+		Username: "acoustid",
 		Password: "acoustid",
 	}
 }
@@ -40,7 +40,7 @@ func NewDatabaseConfig() *DatabaseConfig {
 func (cfg *DatabaseConfig) URL() *url.URL {
 	var u url.URL
 	u.Scheme = "postgresql"
-	u.User = url.UserPassword(cfg.User, cfg.Password)
+	u.User = url.UserPassword(cfg.Username, cfg.Password)
 	u.Host = net.JoinHostPort(cfg.Host, strconv.Itoa(cfg.Port))
 	u.Path = fmt.Sprintf("/%s", cfg.Name)
 	return &u
