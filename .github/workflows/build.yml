@@ -22,11 +22,11 @@ jobs:
     - name: Build binaries
       run: ./ci/build.sh
 
-    - name: Upload aindex binary
+    - name: Upload binaries
       uses: actions/upload-artifact@v1
       with:
-        name: aindex-linux-amd64
-        path: aindex-linux-amd64
+        name: dist
+        path: dist
 
   docker:
     name: Build Docker images
@@ -41,7 +41,7 @@ jobs:
     - name: Download aindex binary
       uses: actions/download-artifact@v1
       with:
-        name: aindex-linux-amd64
+        name: dist
       if: github.ref == 'refs/heads/master' || startsWith(github.ref, 'ref/tags/')
 
     - name: Build Docker images

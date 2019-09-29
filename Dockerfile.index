@@ -1,5 +1,5 @@
 FROM scratch
 
-COPY aindex-linux-amd64 /aindex
+COPY dist/aindex-linux-amd64 /aindex
 
 CMD ["/aindex"]
