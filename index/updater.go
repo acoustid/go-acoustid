@@ -95,10 +95,14 @@ func RunUpdater(cfg *UpdaterConfig) {
 
 	fp := NewFingerprintStore(db)
 
+	const MaxDelay = time.Minute
 	var delay time.Duration
 
 	for {
 		if delay > 0 {
+			if delay > MaxDelay {
+				delay = MaxDelay
+			}
 			log.Debugf("Sleeping for %v", delay)
 			time.Sleep(delay)
 		}
@@ -109,21 +113,21 @@ func RunUpdater(cfg *UpdaterConfig) {
 		lastID, err := GetLastFingerprintID(ctx, idx)
 		if err != nil {
 			log.Fatalf("Failed to get the last fingerprint ID in index: %s", err)
-			delay = 10 * time.Second
+			delay = MaxDelay
 			continue
 		}
 
 		fingerprints, err := fp.GetNextFingerprints(ctx, lastID, UpdateBatchSize)
 		if err != nil {
 			log.Fatalf("Failed to get the next fingerprints to import: %s", err)
-			delay = 10 * time.Second
+			delay = MaxDelay
 			continue
 		}
 
 		err = MultiInsert(ctx, idx, fingerprints)
 		if err != nil {
 			log.Fatalf("Failed to import the fingerprints: %s", err)
-			delay = 10 * time.Second
+			delay = MaxDelay
 			continue
 		}
 
@@ -135,11 +139,7 @@ func RunUpdater(cfg *UpdaterConfig) {
 		}
 
 		if fingerprintCount == 0 {
-			if delay > time.Second {
-			    delay = time.Second
-			} else {
-				delay += 10 * time.Millisecond
-			}
+			delay += (delay * 10) / 100
 		} else {
 			delay = 0
 		}
