@@ -95,11 +95,14 @@ func RunUpdater(cfg *UpdaterConfig) {
 
 	fp := NewFingerprintStore(db)
 
+	const NoDelay = 0 * time.Millisecond
+	const MinDelay = 10 * time.Millisecond
 	const MaxDelay = time.Minute
+
 	var delay time.Duration
 
 	for {
-		if delay > 0 {
+		if delay > NoDelay {
 			if delay > MaxDelay {
 				delay = MaxDelay
 			}
@@ -139,9 +142,13 @@ func RunUpdater(cfg *UpdaterConfig) {
 		}
 
 		if fingerprintCount == 0 {
-			delay += (delay * 10) / 100
+			if delay > NoDelay {
+				delay += (delay * 10) / 100
+			} else {
+				delay = MinDelay
+			}
 		} else {
-			delay = 0
+			delay = NoDelay
 		}
 	}
 }
