@@ -135,11 +135,10 @@ func RunUpdater(cfg *UpdaterConfig) {
 		}
 
 		fingerprintCount := len(fingerprints)
-		if fingerprintCount == 0 {
-			log.Infof("Added %d fingerprints", fingerprintCount)
-		} else {
-			log.Infof("Added %d fingerprints up to ID %d", fingerprintCount, fingerprints[fingerprintCount-1].ID)
+		if fingerprintCount > 0 {
+			lastID = fingerprints[fingerprintCount-1].ID
 		}
+		log.Infof("Added %d fingerprints up to ID %d", fingerprintCount, lastID)
 
 		if fingerprintCount == 0 {
 			if delay > NoDelay {
