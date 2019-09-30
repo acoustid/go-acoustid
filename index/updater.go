@@ -135,7 +135,9 @@ func RunUpdater(cfg *UpdaterConfig) {
 		}
 
 		if fingerprintCount == 0 {
-			if delay < time.Second {
+			if delay > time.Second {
+			    delay = time.Second
+			} else {
 				delay += 10 * time.Millisecond
 			}
 		} else {
