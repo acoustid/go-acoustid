@@ -25,6 +25,10 @@ type FingerprintInfo struct {
 }
 
 func MultiInsert(ctx context.Context, idx Index, fingerprints []FingerprintInfo) error {
+	if len(fingerprints) == 0 {
+		return nil
+	}
+
 	tx, err := idx.BeginTx(ctx)
 	if err != nil {
 		return err
