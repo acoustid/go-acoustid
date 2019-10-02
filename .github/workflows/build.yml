@@ -36,21 +36,21 @@ jobs:
 
     - name: Check out code
       uses: actions/checkout@v1
-      if: github.ref == 'refs/heads/master' || startsWith(github.ref, 'ref/tags/')
+      if: github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/')
 
     - name: Download aindex binary
       uses: actions/download-artifact@v1
       with:
         name: dist
-      if: github.ref == 'refs/heads/master' || startsWith(github.ref, 'ref/tags/')
+      if: github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/')
 
     - name: Build Docker images
       run: ./ci/build-images.sh
-      if: github.ref == 'refs/heads/master' || startsWith(github.ref, 'ref/tags/')
+      if: github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/')
 
     - name: Push Docker images
       run: ./ci/push-images.sh
       env:
         QUAY_USERNAME: ${{ secrets.QUAY_USERNAME }}
         QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
-      if: github.ref == 'refs/heads/master' || startsWith(github.ref, 'ref/tags/')
+      if: github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/')
