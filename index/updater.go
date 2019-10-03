@@ -42,10 +42,14 @@ func (s *FingerprintStore) GetNextFingerprints(ctx context.Context, lastID uint3
 	var fingerprints []FingerprintInfo
 	for rows.Next() {
 		var id uint32
-		var hashes []uint32
-		err = rows.Scan(&id, pq.Array(&hashes))
+		var signedHashes []int32
+		err = rows.Scan(&id, pq.Array(&signedHashes))
 		if err != nil {
 			return nil, err
+		}
+		hashes := make([]uint32, len(signedHashes))
+		for i, hash := range signedHashes {
+			hashes[i] = uint32(hash)
 		}
 		fingerprints = append(fingerprints, FingerprintInfo{ID: id, Hashes: hashes})
 	}
