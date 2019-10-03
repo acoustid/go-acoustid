@@ -119,21 +119,21 @@ func RunUpdater(cfg *UpdaterConfig) {
 
 		lastID, err := GetLastFingerprintID(ctx, idx)
 		if err != nil {
-			log.Fatalf("Failed to get the last fingerprint ID in index: %s", err)
+			log.Errorf("Failed to get the last fingerprint ID in index: %s", err)
 			delay = MaxDelay
 			continue
 		}
 
 		fingerprints, err := fp.GetNextFingerprints(ctx, lastID, UpdateBatchSize)
 		if err != nil {
-			log.Fatalf("Failed to get the next fingerprints to import: %s", err)
+			log.Errorf("Failed to get the next fingerprints to import: %s", err)
 			delay = MaxDelay
 			continue
 		}
 
 		err = MultiInsert(ctx, idx, fingerprints)
 		if err != nil {
-			log.Fatalf("Failed to import the fingerprints: %s", err)
+			log.Errorf("Failed to import the fingerprints: %s", err)
 			delay = MaxDelay
 			continue
 		}
