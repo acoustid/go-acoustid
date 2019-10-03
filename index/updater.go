@@ -42,8 +42,8 @@ func (s *FingerprintStore) GetNextFingerprints(ctx context.Context, lastID uint3
 	var fingerprints []FingerprintInfo
 	for rows.Next() {
 		var id uint32
-		var signedHashes []int32
-		err = rows.Scan(&id, pq.Array(&signedHashes))
+		var signedHashes pq.Int64Array
+		err = rows.Scan(&id, signedHashes)
 		if err != nil {
 			return nil, err
 		}
