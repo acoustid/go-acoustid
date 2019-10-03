@@ -18,13 +18,29 @@ var ErrClientNotOK = errors.New("index client connection is in error state")
 var ErrTxDone = errors.New("transaction already closed")
 var ErrTxActive = errors.New("another transaction is still active")
 
+func DecodeFingerprint(encoded string) ([]uint32, error) {
+	if strings.HasPrefix(encoded, "{") && strings.HasSuffix(encoded, "}") {
+		encoded = strings.Trim(encoded, "{}")
+	}
+	items := strings.Split(encoded, ",")
+	hashes := make([]uint32, len(items))
+	for i, item := range items {
+		value, err := strconv.ParseInt(item, 10, 32)
+		if err != nil {
+			return nil, err
+		}
+		hashes[i] = uint32(int32(value))
+	}
+	return hashes, nil
+}
+
 func EncodeFingerprint(hashes []uint32) string {
 	var b strings.Builder
 	for i, hash := range hashes {
 		if i > 0 {
 			b.WriteRune(',')
 		}
-		b.WriteString(strconv.FormatUint(uint64(hash), 10))
+		b.WriteString(strconv.FormatInt(int64(int32(hash)), 10))
 	}
 	return b.String()
 }

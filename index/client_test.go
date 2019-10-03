@@ -101,3 +101,21 @@ func TestIndexClient(t *testing.T) {
 
 	wg.Wait()
 }
+
+func TestEncodeFingerprint(t *testing.T) {
+	hashes := []uint32{0xffffffff, 1, 2, 3}
+	result := EncodeFingerprint(hashes)
+	assert.Equal(t, result, "-1,1,2,3")
+}
+
+func TestDecodeFingerprint(t *testing.T) {
+	result, err := DecodeFingerprint("-1,1,2,3")
+	assert.Nil(t, err)
+	assert.Equal(t, result, []uint32{0xffffffff, 1, 2, 3})
+}
+
+func TestDecodeFingerprintWithBraces(t *testing.T) {
+	result, err := DecodeFingerprint("{-1,1,2,3}")
+	assert.Nil(t, err)
+	assert.Equal(t, result, []uint32{0xffffffff, 1, 2, 3})
+}

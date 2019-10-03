@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"time"
 
-	"github.com/lib/pq"
+    _ "github.com/lib/pq"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -35,21 +35,21 @@ func (s *FingerprintStore) GetMaxID(ctx context.Context) (int, error) {
 }
 
 func (s *FingerprintStore) GetNextFingerprints(ctx context.Context, lastID uint32, limit int) ([]FingerprintInfo, error) {
-	rows, err := s.db.QueryContext(ctx, "SELECT id, acoustid_extract_query(fingerprint) FROM fingerprint WHERE id > $1 ORDER BY id LIMIT $2", lastID, limit)
+	rows, err := s.db.QueryContext(ctx, "SELECT id, acoustid_extract_query(fingerprint)::text FROM fingerprint WHERE id > $1 ORDER BY id LIMIT $2", lastID, limit)
 	if err != nil {
 		return nil, err
 	}
 	var fingerprints []FingerprintInfo
 	for rows.Next() {
 		var id uint32
-		var signedHashes pq.Int64Array
-		err = rows.Scan(&id, &signedHashes)
+		var encodedHashes string
+		err = rows.Scan(&id, &encodedHashes)
 		if err != nil {
 			return nil, err
 		}
-		hashes := make([]uint32, len(signedHashes))
-		for i, hash := range signedHashes {
-			hashes[i] = uint32(hash)
+		hashes, err := DecodeFingerprint(encodedHashes)
+		if err != nil {
+			return nil, err
 		}
 		fingerprints = append(fingerprints, FingerprintInfo{ID: id, Hashes: hashes})
 	}
