@@ -86,12 +86,6 @@ func TestIndexClient(t *testing.T) {
 	err = tx2.Rollback(ctx)
 	assert.Nil(t, err, "got error from tx2.Rollback()")
 
-	var fingerprints []FingerprintInfo
-	fingerprints = append(fingerprints, FingerprintInfo{ID: 1, Hashes: []uint32{100, 200, 300}})
-	fingerprints = append(fingerprints, FingerprintInfo{ID: 2, Hashes: []uint32{400, 500, 600}})
-	err = MultiInsert(ctx, idx, fingerprints)
-	assert.Nil(t, err, "got error from MultiInsert()")
-
 	id, err := GetLastFingerprintID(ctx, idx)
 	assert.Nil(t, err, "got error from GetLastFingerprintID()")
 	assert.Equal(t, id, uint32(2))
