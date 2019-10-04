@@ -63,32 +63,41 @@ func TestIndexClient(t *testing.T) {
 
 	err := idx.Ping(ctx)
 	assert.Nil(t, err, "got error from idx.Ping()")
+	assert.True(t, idx.IsOK())
 
 	value, err := idx.GetAttribute(ctx, "foo")
 	assert.Nil(t, err, "got error from idx.GetAttribute()")
 	assert.Equal(t, value, "bar")
+	assert.True(t, idx.IsOK())
 
 	err = idx.SetAttribute(ctx, "foo", "baz")
 	assert.Nil(t, err, "got error from idx.SetAttribute()")
+	assert.True(t, idx.IsOK())
 
 	tx, err := idx.BeginTx(ctx)
 	assert.Nil(t, err, "got error from idx.BeginTx()")
+	assert.True(t, idx.IsOK())
 
 	err = tx.Insert(ctx, 1, []uint32{100, 200, 300})
 	assert.Nil(t, err, "got error from tx.Insert()")
+	assert.True(t, idx.IsOK())
 
 	err = tx.Commit(ctx)
 	assert.Nil(t, err, "got error from tx.Commit()")
+	assert.True(t, idx.IsOK())
 
 	tx2, err := idx.BeginTx(ctx)
 	assert.Nil(t, err, "got error from idx.BeginTx()")
+	assert.True(t, idx.IsOK())
 
 	err = tx2.Rollback(ctx)
 	assert.Nil(t, err, "got error from tx2.Rollback()")
+	assert.True(t, idx.IsOK())
 
 	id, err := GetLastFingerprintID(ctx, idx)
 	assert.Nil(t, err, "got error from GetLastFingerprintID()")
 	assert.Equal(t, id, uint32(2))
+	assert.True(t, idx.IsOK())
 
 	idx.Close(ctx)
 	server.Close()

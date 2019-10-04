@@ -97,6 +97,8 @@ type IndexClient struct {
 	closed      bool
 	hasError    bool
 	hasDeadline bool
+	numRequests uint64
+	numResponses uint64
 	tx          *IndexClientTx
 }
 
@@ -121,7 +123,7 @@ func ConnectWithConfig(ctx context.Context, config *IndexConfig) (*IndexClient, 
 }
 
 func (c *IndexClient) IsOK() bool {
-	return !c.closed && !c.hasError
+	return !c.closed && !c.hasError && c.numRequests == c.numResponses
 }
 
 func (c *IndexClient) Close(ctx context.Context) error {
@@ -156,7 +158,12 @@ func (c *IndexClient) sendRequest(ctx context.Context, request string) (string, 
 		return "", err
 	}
 
-	WriteLine(c.buf.Writer, request)
+	err = WriteLine(c.buf.Writer, request)
+	if err != nil {
+		c.hasError = true
+		return "", err
+	}
+	c.numRequests += 1
 
 	err = ctx.Err()
 	if err != nil {
@@ -165,19 +172,23 @@ func (c *IndexClient) sendRequest(ctx context.Context, request string) (string, 
 
 	response, err := ReadLine(c.buf.Reader)
 	if err != nil {
+		c.hasError = true
 		return "", err
 	}
 
 	if strings.HasPrefix(response, kPrefixOK) {
 		response = strings.TrimPrefix(response, kPrefixOK)
+		c.numResponses += 1
 		return response, nil
 	}
 
 	if strings.HasPrefix(response, kPrefixERR) {
 		response = strings.TrimPrefix(response, kPrefixERR)
+		c.numResponses += 1
 		return "", errors.New(response)
 	}
 
+	c.hasError = true
 	return "", fmt.Errorf("Invalid response: %v", response)
 }
 
