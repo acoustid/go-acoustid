@@ -19,32 +19,6 @@ type Tx interface {
 	Rollback(ctx context.Context) error
 }
 
-type FingerprintInfo struct {
-	ID     uint32
-	Hashes []uint32
-}
-
-func MultiInsert(ctx context.Context, idx Index, fingerprints []FingerprintInfo) error {
-	if len(fingerprints) == 0 {
-		return nil
-	}
-
-	tx, err := idx.BeginTx(ctx)
-	if err != nil {
-		return err
-	}
-
-	for _, fingerprint := range fingerprints {
-		err = tx.Insert(ctx, fingerprint.ID, fingerprint.Hashes)
-		if err != nil {
-			tx.Rollback(ctx)
-			return err
-		}
-	}
-
-	return tx.Commit(ctx)
-}
-
 func GetLastFingerprintID(ctx context.Context, idx Index) (uint32, error) {
 	strValue, err := idx.GetAttribute(ctx, "max_document_id")
 	if err != nil {

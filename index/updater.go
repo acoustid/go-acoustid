@@ -5,7 +5,9 @@ import (
 	"database/sql"
 	"time"
 
-    _ "github.com/lib/pq"
+	pb "github.com/acoustid/go-acoustid/proto/index"
+
+	_ "github.com/lib/pq"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -34,12 +36,12 @@ func (s *FingerprintStore) GetMaxID(ctx context.Context) (int, error) {
 	return id, nil
 }
 
-func (s *FingerprintStore) GetNextFingerprints(ctx context.Context, lastID uint32, limit int) ([]FingerprintInfo, error) {
+func (s *FingerprintStore) GetNextFingerprints(ctx context.Context, lastID uint32, limit int) ([]*pb.Fingerprint, error) {
 	rows, err := s.db.QueryContext(ctx, "SELECT id, acoustid_extract_query(fingerprint)::text FROM fingerprint WHERE id > $1 ORDER BY id LIMIT $2", lastID, limit)
 	if err != nil {
 		return nil, err
 	}
-	var fingerprints []FingerprintInfo
+	var fingerprints []*pb.Fingerprint
 	for rows.Next() {
 		var id uint32
 		var encodedHashes string
@@ -51,7 +53,7 @@ func (s *FingerprintStore) GetNextFingerprints(ctx context.Context, lastID uint3
 		if err != nil {
 			return nil, err
 		}
-		fingerprints = append(fingerprints, FingerprintInfo{ID: id, Hashes: hashes})
+		fingerprints = append(fingerprints, &pb.Fingerprint{Id: id, Hashes: hashes})
 	}
 	err = rows.Close()
 	if err != nil {
@@ -131,7 +133,7 @@ func RunUpdater(cfg *UpdaterConfig) {
 			continue
 		}
 
-		err = MultiInsert(ctx, idx, fingerprints)
+		_, err = idx.Insert(ctx, &pb.InsertRequest{Fingerprints: fingerprints})
 		if err != nil {
 			log.Errorf("Failed to import the fingerprints: %s", err)
 			delay = MaxDelay
@@ -140,7 +142,7 @@ func RunUpdater(cfg *UpdaterConfig) {
 
 		fingerprintCount := len(fingerprints)
 		if fingerprintCount > 0 {
-			lastID = fingerprints[fingerprintCount-1].ID
+			lastID = fingerprints[fingerprintCount-1].Id
 			log.Infof("Added %d fingerprints up to ID %d", fingerprintCount, lastID)
 		} else {
 			log.Debugf("Added %d fingerprints up to ID %d", fingerprintCount, lastID)

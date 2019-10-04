@@ -8,6 +8,8 @@ import (
 	"net"
 	"strconv"
 	"strings"
+
+	pb "github.com/acoustid/go-acoustid/proto/index"
 )
 
 const kPrefixOK = "OK "
@@ -17,6 +19,30 @@ var ErrClientNotOK = errors.New("index client connection is in error state")
 
 var ErrTxDone = errors.New("transaction already closed")
 var ErrTxActive = errors.New("another transaction is still active")
+
+var ErrInvalidResultFormat = errors.New("invalid format of search results")
+
+func DecodeResults(encoded string) ([]*pb.Result, error) {
+	items := strings.Split(encoded, " ")
+	results := make([]*pb.Result, len(items))
+	for i, item := range items {
+		fields := strings.Split(item, ":")
+		if len(fields) != 2 {
+			return nil, ErrInvalidResultFormat
+		}
+		id, err := strconv.ParseUint(fields[0], 10, 32)
+		if err != nil {
+			return nil, ErrInvalidResultFormat
+		}
+		hits, err := strconv.ParseUint(fields[1], 10, 32)
+		if err != nil {
+			return nil, ErrInvalidResultFormat
+		}
+		results[i].Id = uint32(id)
+		results[i].Hits = uint32(hits)
+	}
+	return results, nil
+}
 
 func DecodeFingerprint(encoded string) ([]uint32, error) {
 	if strings.HasPrefix(encoded, "{") && strings.HasSuffix(encoded, "}") {
@@ -167,6 +193,53 @@ func (c *IndexClient) GetAttribute(ctx context.Context, name string) (string, er
 func (c *IndexClient) SetAttribute(ctx context.Context, name string, value string) error {
 	_, err := c.sendRequest(ctx, fmt.Sprintf("set attribute %s %s", name, value))
 	return err
+}
+
+func (c *IndexClient) Search(ctx context.Context, in *pb.SearchRequest) (*pb.SearchResponse, error) {
+	out := &pb.SearchResponse{}
+
+	response, err := c.sendRequest(ctx, fmt.Sprintf("search %s", EncodeFingerprint(in.GetHashes())))
+	if err != nil {
+		return nil, err
+	}
+
+	results, err := DecodeResults(response)
+	if err != nil {
+		return nil, err
+	}
+
+	out.Results = results
+	return out, nil
+}
+
+func (c *IndexClient) Insert(ctx context.Context, in *pb.InsertRequest) (*pb.InsertResponse, error) {
+	out := &pb.InsertResponse{}
+
+	fingerprints := in.GetFingerprints()
+	if len(fingerprints) == 0 {
+		return out, nil
+	}
+
+	tx, err := c.BeginTx(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, fingerprint := range fingerprints {
+		err = tx.Insert(ctx, fingerprint.GetId(), fingerprint.GetHashes())
+		if err != nil {
+			tx.Rollback(ctx)
+			return nil, err
+		}
+	}
+
+	err = tx.Commit(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return out, nil
+
 }
 
 func (c *IndexClient) BeginTx(ctx context.Context) (Tx, error) {

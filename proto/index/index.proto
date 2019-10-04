@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+package index;
+
+service Index {
+  rpc Search(SearchRequest) returns (SearchResponse) {}
+  rpc Insert(InsertRequest) returns (InsertResponse) {}
+}
+
+message SearchRequest {
+  repeated uint32 hashes = 1;
+}
+
+message SearchResponse {
+  repeated Result results = 1;
+}
+
+message InsertRequest {
+  repeated Fingerprint fingerprints = 1;
+}
+
+message InsertResponse {
+}
+
+message Result {
+  uint32 id = 1;
+  uint32 hits = 2;
+}
+
+message Fingerprint {
+  uint32 id = 1;
+  repeated uint32 hashes = 2;
+}

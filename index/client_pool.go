@@ -4,7 +4,10 @@ import (
 	"context"
 	"time"
 
+	pb "github.com/acoustid/go-acoustid/proto/index"
+
 	pool "github.com/jolestar/go-commons-pool"
+	log "github.com/sirupsen/logrus"
 )
 
 type IndexClientFactory struct {
@@ -52,7 +55,7 @@ func (f IndexClientFactory) PassivateObject(ctx context.Context, obj *pool.Poole
 	return nil
 }
 
-func NewIndexClientPool(config *IndexConfig, limit int) *pool.ObjectPool {
+func NewIndexClientPool(config *IndexConfig, limit int) *IndexClientPool {
 	ctx := context.Background()
 	factory := &IndexClientFactory{Config: config}
 	poolConfig := pool.NewDefaultPoolConfig()
@@ -60,5 +63,50 @@ func NewIndexClientPool(config *IndexConfig, limit int) *pool.ObjectPool {
 	poolConfig.MaxIdle = limit
 	poolConfig.TestWhileIdle = true
 	poolConfig.TimeBetweenEvictionRuns = 10 * time.Second
-	return pool.NewObjectPool(ctx, factory, poolConfig)
+	pool := pool.NewObjectPool(ctx, factory, poolConfig)
+	return &IndexClientPool{Pool: pool}
+}
+
+type IndexClientPool struct {
+	Pool *pool.ObjectPool
+}
+
+func (p *IndexClientPool) Close(ctx context.Context) {
+	p.Pool.Close(ctx)
+}
+
+func (p *IndexClientPool) Search(ctx context.Context, in *pb.SearchRequest) (*pb.SearchResponse, error) {
+	obj, err := p.Pool.BorrowObject(ctx)
+	if err != nil {
+		log.Errorf("failed to borrow index client from the pool: %v", err)
+		return nil, err
+	}
+
+	defer func() {
+		err := p.Pool.ReturnObject(ctx, obj)
+		if err != nil {
+			log.Errorf("failed to return index client to the pool: %v", err)
+		}
+	}()
+
+	idx := obj.(*IndexClient)
+	return idx.Search(ctx, in)
+}
+
+func (p *IndexClientPool) Insert(ctx context.Context, in *pb.InsertRequest) (*pb.InsertResponse, error) {
+	obj, err := p.Pool.BorrowObject(ctx)
+	if err != nil {
+		log.Errorf("failed to borrow index client from the pool: %v", err)
+		return nil, err
+	}
+
+	defer func() {
+		err := p.Pool.ReturnObject(ctx, obj)
+		if err != nil {
+			log.Errorf("failed to return index client to the pool: %v", err)
+		}
+	}()
+
+	idx := obj.(*IndexClient)
+	return idx.Insert(ctx, in)
 }

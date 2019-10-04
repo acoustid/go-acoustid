@@ -90,7 +90,7 @@ func CreateApp() *cli.App {
 	app.Commands = []cli.Command{
 		{
 			Name:  "updater",
-			Usage: "Runs AcoustID index updater",
+			Usage: "Runs updater",
 			Flags: []cli.Flag{
 				IndexHostFlag,
 				IndexPortFlag,
@@ -102,6 +102,7 @@ func CreateApp() *cli.App {
 			},
 			Action: PrepareAndRunUpdater,
 		},
+		ProxyCommand,
 	}
 	return app
 }
