@@ -6,61 +6,13 @@ import (
 	"time"
 
 	pb "github.com/acoustid/go-acoustid/proto/index"
+	"github.com/acoustid/go-acoustid/database/fingerprint_db"
 
 	_ "github.com/lib/pq"
 	log "github.com/sirupsen/logrus"
 )
 
 const UpdateBatchSize = 1000
-
-type FingerprintStore struct {
-	db *sql.DB
-}
-
-func NewFingerprintStore(db *sql.DB) *FingerprintStore {
-	return &FingerprintStore{
-		db: db,
-	}
-}
-
-func (s *FingerprintStore) GetMaxID(ctx context.Context) (int, error) {
-	row := s.db.QueryRowContext(ctx, "SELECT max(id) FROM fingerprint")
-	var id int
-	err := row.Scan(&id)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return 0, nil
-		}
-		return 0, err
-	}
-	return id, nil
-}
-
-func (s *FingerprintStore) GetNextFingerprints(ctx context.Context, lastID uint32, limit int) ([]*pb.Fingerprint, error) {
-	rows, err := s.db.QueryContext(ctx, "SELECT id, acoustid_extract_query(fingerprint)::text FROM fingerprint WHERE id > $1 ORDER BY id LIMIT $2", lastID, limit)
-	if err != nil {
-		return nil, err
-	}
-	var fingerprints []*pb.Fingerprint
-	for rows.Next() {
-		var id uint32
-		var encodedHashes string
-		err = rows.Scan(&id, &encodedHashes)
-		if err != nil {
-			return nil, err
-		}
-		hashes, err := DecodeFingerprint(encodedHashes)
-		if err != nil {
-			return nil, err
-		}
-		fingerprints = append(fingerprints, &pb.Fingerprint{Id: id, Hashes: hashes})
-	}
-	err = rows.Close()
-	if err != nil {
-		return nil, err
-	}
-	return fingerprints, nil
-}
 
 type UpdaterConfig struct {
 	Database *DatabaseConfig
@@ -99,7 +51,7 @@ func RunUpdater(cfg *UpdaterConfig) {
 	}
 	defer idx.Close(context.Background())
 
-	fp := NewFingerprintStore(db)
+	fpDB := fingerprint_db.NewFingerprintDB(db)
 
 	const NoDelay = 0 * time.Millisecond
 	const MinDelay = 10 * time.Millisecond
@@ -126,7 +78,7 @@ func RunUpdater(cfg *UpdaterConfig) {
 			continue
 		}
 
-		fingerprints, err := fp.GetNextFingerprints(ctx, lastID, UpdateBatchSize)
+		fingerprints, err := fpDB.GetNextFingerprints(ctx, lastID, true, UpdateBatchSize)
 		if err != nil {
 			log.Errorf("Failed to get the next fingerprints to import: %s", err)
 			delay = MaxDelay

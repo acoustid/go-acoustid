@@ -107,8 +107,14 @@ func TestIndexClient(t *testing.T) {
 
 func TestEncodeFingerprint(t *testing.T) {
 	hashes := []uint32{0xffffffff, 1, 2, 3}
-	result := EncodeFingerprint(hashes)
+	result := EncodeFingerprint(hashes, false)
 	assert.Equal(t, result, "-1,1,2,3")
+}
+
+func TestEncodeFingerprintWithBraces(t *testing.T) {
+	hashes := []uint32{0xffffffff, 1, 2, 3}
+	result := EncodeFingerprint(hashes, true)
+	assert.Equal(t, result, "{-1,1,2,3}")
 }
 
 func TestDecodeFingerprint(t *testing.T) {

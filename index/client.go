@@ -60,13 +60,19 @@ func DecodeFingerprint(encoded string) ([]uint32, error) {
 	return hashes, nil
 }
 
-func EncodeFingerprint(hashes []uint32) string {
+func EncodeFingerprint(hashes []uint32, braces bool) string {
 	var b strings.Builder
+	if braces {
+		b.WriteRune('{')
+	}
 	for i, hash := range hashes {
 		if i > 0 {
 			b.WriteRune(',')
 		}
 		b.WriteString(strconv.FormatInt(int64(int32(hash)), 10))
+	}
+	if braces {
+		b.WriteRune('}')
 	}
 	return b.String()
 }
@@ -92,14 +98,14 @@ func ReadLine(reader *bufio.Reader) (string, error) {
 }
 
 type IndexClient struct {
-	conn        net.Conn
-	buf         *bufio.ReadWriter
-	closed      bool
-	hasError    bool
-	hasDeadline bool
-	numRequests uint64
+	conn         net.Conn
+	buf          *bufio.ReadWriter
+	closed       bool
+	hasError     bool
+	hasDeadline  bool
+	numRequests  uint64
 	numResponses uint64
-	tx          *IndexClientTx
+	tx           *IndexClientTx
 }
 
 func NewIndexClient(conn net.Conn) *IndexClient {
@@ -209,7 +215,7 @@ func (c *IndexClient) SetAttribute(ctx context.Context, name string, value strin
 func (c *IndexClient) Search(ctx context.Context, in *pb.SearchRequest) (*pb.SearchResponse, error) {
 	out := &pb.SearchResponse{}
 
-	response, err := c.sendRequest(ctx, fmt.Sprintf("search %s", EncodeFingerprint(in.GetHashes())))
+	response, err := c.sendRequest(ctx, fmt.Sprintf("search %s", EncodeFingerprint(in.GetHashes(), false)))
 	if err != nil {
 		return nil, err
 	}
@@ -278,7 +284,7 @@ func (tx *IndexClientTx) Insert(ctx context.Context, id uint32, hashes []uint32)
 	if err != nil {
 		return err
 	}
-	_, err = tx.c.sendRequest(ctx, fmt.Sprintf("insert %d %s", id, EncodeFingerprint(hashes)))
+	_, err = tx.c.sendRequest(ctx, fmt.Sprintf("insert %d %s", id, EncodeFingerprint(hashes, false)))
 	return err
 }
 

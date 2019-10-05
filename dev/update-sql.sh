@@ -16,6 +16,7 @@ do
         pg_dump -s -N _acoustid_repl --no-owner $db \
         | grep -v _acoustid_repl \
         | grep -v '^COMMENT ON EXTENSION ' \
+        | grep -v '^SELECT pg_catalog.set_config' \
         | grep -v '^--' \
         > sql/$instance/schema.sql
 

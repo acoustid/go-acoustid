@@ -11,6 +11,7 @@ require (
 	github.com/pkg/errors v0.8.1
 	github.com/sirupsen/logrus v1.4.2
 	github.com/stretchr/testify v1.4.0
+	github.com/ulule/loukoum/v3 v3.2.0
 	github.com/urfave/cli v1.22.1
 	go4.org v0.0.0-20190919214946-0cfe6e5be80f
 	google.golang.org/grpc v1.24.0
