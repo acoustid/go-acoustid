@@ -52,4 +52,3 @@ func (s *FingerprintDB) GetNextFingerprints(ctx context.Context, lastID uint32, 
 	}
 	return fingerprints, nil
 }
-

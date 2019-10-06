@@ -9,7 +9,7 @@ func RunServerCommand(c *cli.Context) error {
 }
 
 var ServerCommand = cli.Command{
-	Name:  "server",
-	Usage: "Runs updater",
+	Name:   "server",
+	Usage:  "Runs updater",
 	Action: RunServerCommand,
 }

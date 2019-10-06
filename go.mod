@@ -3,6 +3,7 @@ module github.com/acoustid/go-acoustid
 go 1.13
 
 require (
+	github.com/DATA-DOG/go-txdb v0.1.3
 	github.com/dchest/safefile v0.0.0-20151022103144-855e8d98f185
 	github.com/fortytw2/leaktest v1.3.0 // indirect
 	github.com/golang/protobuf v1.3.2

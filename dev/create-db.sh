@@ -2,7 +2,27 @@
 
 set -e
 
-psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOSQL
+if [ -n "$POSTGRES_HOST" ]
+then
+    export PGHOST="$POSTGRES_HOST"
+fi
+
+if [ -n "$POSTGRES_PORT" ]
+then
+    export PGPORT="$POSTGRES_PORT"
+fi
+
+if [ -n "$POSTGRES_USER" ]
+then
+    export PGUSER="$POSTGRES_USER"
+fi
+
+if [ -n "$POSTGRES_PASSWORD" ]
+then
+    export PGPASSWORD="$POSTGRES_PASSWORD"
+fi
+
+psql -v ON_ERROR_STOP=1 --dbname "$POSTGRES_DB" <<-EOSQL
 
     CREATE USER acoustid WITH PASSWORD 'acoustid';
 
@@ -34,12 +54,15 @@ psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-E
 
 EOSQL
 
-psql -v ON_ERROR_STOP=1 --username acoustid --dbname acoustid_app -f /mnt/sql/app/schema.sql
-psql -v ON_ERROR_STOP=1 --username acoustid --dbname acoustid_fingerprint -f /mnt/sql/fingerprint/schema.sql
-psql -v ON_ERROR_STOP=1 --username acoustid --dbname acoustid_ingest -f /mnt/sql/ingest/schema.sql
-psql -v ON_ERROR_STOP=1 --username acoustid --dbname musicbrainz -f /mnt/sql/musicbrainz/schema.sql
+export PGUSER=acoustid
+export PGPASSWORD=acoustid
 
-psql -v ON_ERROR_STOP=1 --username acoustid --dbname acoustid_app_test -f /mnt/sql/app/schema.sql
-psql -v ON_ERROR_STOP=1 --username acoustid --dbname acoustid_fingerprint_test -f /mnt/sql/fingerprint/schema.sql
-psql -v ON_ERROR_STOP=1 --username acoustid --dbname acoustid_ingest_test -f /mnt/sql/ingest/schema.sql
-psql -v ON_ERROR_STOP=1 --username acoustid --dbname musicbrainz_test -f /mnt/sql/musicbrainz/schema.sql
+psql -v ON_ERROR_STOP=1 --dbname acoustid_app -f $ACOUSTID_SQL_DIR/app/schema.sql
+psql -v ON_ERROR_STOP=1 --dbname acoustid_fingerprint -f $ACOUSTID_SQL_DIR/fingerprint/schema.sql
+psql -v ON_ERROR_STOP=1 --dbname acoustid_ingest -f $ACOUSTID_SQL_DIR/ingest/schema.sql
+psql -v ON_ERROR_STOP=1 --dbname musicbrainz -f $ACOUSTID_SQL_DIR/musicbrainz/schema.sql
+
+psql -v ON_ERROR_STOP=1 --dbname acoustid_app_test -f $ACOUSTID_SQL_DIR/app/schema.sql
+psql -v ON_ERROR_STOP=1 --dbname acoustid_fingerprint_test -f $ACOUSTID_SQL_DIR/fingerprint/schema.sql
+psql -v ON_ERROR_STOP=1 --dbname acoustid_ingest_test -f $ACOUSTID_SQL_DIR/ingest/schema.sql
+psql -v ON_ERROR_STOP=1 --dbname musicbrainz_test -f $ACOUSTID_SQL_DIR/musicbrainz/schema.sql

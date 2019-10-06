@@ -16,8 +16,28 @@ jobs:
     - name: Check out code
       uses: actions/checkout@v1
 
+    - name: Set up PostgreSQL databases
+      uses: docker://quay.io/acoustid/postgresql:master
+      with:
+        entrypoint: /bin/bash
+        args: ./dev/create-db.sh
+      env:
+        ACOUSTID_SQL_DIR: sql
+        POSTGRES_DB: postgres
+        POSTGRES_USER: postgres
+        POSTGRES_PASSWORD: password
+        POSTGRES_HOST: postgresql
+        POSTGRES_PORT: 5432
+
     - name: Test
       run: ./ci/test.sh
+      env:
+        ACOUSTID_TEST_POSTGRESQL_HOST: localhost
+        ACOUSTID_TEST_POSTGRESQL_PORT: ${{ job.services.postgresql.ports[5432] }}
+        ACOUSTID_TEST_POSTGRESQL_USERNAME: acoustid
+        ACOUSTID_TEST_POSTGRESQL_PASSWORD: acoustid
+        ACOUSTID_TEST_REDIS_HOST: localhost
+        ACOUSTID_TEST_REDIS_PORT: ${{ job.services.redis.ports[6379] }}
 
     - name: Build binaries
       run: ./ci/build.sh
@@ -27,6 +47,22 @@ jobs:
       with:
         name: dist
         path: dist
+
+    services:
+
+      redis:
+        image: redis:alpine
+        ports:
+          - 6379/tcp
+
+      postgresql:
+        image: quay.io/acoustid/postgresql:master
+        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+        ports:
+          - 5432/tcp
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
 
   docker:
     name: Build Docker images

@@ -5,8 +5,9 @@ import (
 	"database/sql"
 	"time"
 
-	pb "github.com/acoustid/go-acoustid/proto/index"
 	"github.com/acoustid/go-acoustid/database/fingerprint_db"
+	pb "github.com/acoustid/go-acoustid/proto/index"
+	"github.com/acoustid/go-acoustid/common"
 
 	_ "github.com/lib/pq"
 	log "github.com/sirupsen/logrus"
@@ -15,14 +16,14 @@ import (
 const UpdateBatchSize = 1000
 
 type UpdaterConfig struct {
-	Database *DatabaseConfig
+	Database *common.DatabaseConfig
 	Index    *IndexConfig
 	Debug    bool
 }
 
 func NewUpdaterConfig() *UpdaterConfig {
 	return &UpdaterConfig{
-		Database: NewDatabaseConfig(),
+		Database: common.NewDatabaseConfig(),
 		Index:    NewIndexConfig(),
 	}
 }

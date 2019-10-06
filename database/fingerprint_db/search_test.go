@@ -1,25 +1,36 @@
 package fingerprint_db
 
 import (
-	"testing"
 	"context"
 	"database/sql"
+	"os"
+	"testing"
 
+	"github.com/acoustid/go-acoustid/common"
+
+	"github.com/DATA-DOG/go-txdb"
 	_ "github.com/lib/pq"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestScoreSearchMatches(t *testing.T) {
-	connStr := "user=acoustid password=acoustid dbname=acoustid_fingerprint_test host=127.0.0.1 port=15432 sslmode=disable"
-	db, err := sql.Open("postgres", connStr)
+	db, err := sql.Open("fingerprint_db_tx", t.Name())
 	require.NoError(t, err)
 
 	ctx := context.Background()
 
 	fpDB := NewFingerprintDB(db)
-	matches, err := fpDB.ScoreSearchMatches(ctx, []uint32{1,2,3}, []int{1})
+	matches, err := fpDB.ScoreSearchMatches(ctx, []uint32{1, 2, 3}, []int{1})
 	require.NoError(t, err)
 
 	assert.Equal(t, matches, []ScoredSearchMatch{})
+}
+
+func TestMain(m *testing.M) {
+	cfg := common.NewTestDatabaseConfig("acoustid_fingerprint_test")
+	txdb.Register("fingerprint_db_tx", "postgres", cfg.URL().String())
+
+	exitCode := m.Run()
+	os.Exit(exitCode)
 }
