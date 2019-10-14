@@ -5,9 +5,9 @@ import (
 	"database/sql"
 	"time"
 
+	"github.com/acoustid/go-acoustid/common"
 	"github.com/acoustid/go-acoustid/database/fingerprint_db"
 	pb "github.com/acoustid/go-acoustid/proto/index"
-	"github.com/acoustid/go-acoustid/common"
 
 	_ "github.com/lib/pq"
 	log "github.com/sirupsen/logrus"
@@ -38,17 +38,20 @@ func RunUpdater(cfg *UpdaterConfig) {
 	db, err := sql.Open("postgres", cfg.Database.URL().String())
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
+		return
 	}
 	defer db.Close()
 
 	err = db.Ping()
 	if err != nil {
 		log.Fatalf("Can't ping the database: %v", err)
+		return
 	}
 
 	idx, err := ConnectWithConfig(context.Background(), cfg.Index)
 	if err != nil {
 		log.Fatalf("Failed to connect to index: %s", err)
+		return
 	}
 	defer idx.Close(context.Background())
 
@@ -61,6 +64,15 @@ func RunUpdater(cfg *UpdaterConfig) {
 	var delay time.Duration
 
 	for {
+		if !idx.IsOK() {
+			log.Infof("Index connection failed, reconnecting...")
+			idx, err = ConnectWithConfig(context.Background(), cfg.Index)
+			if err != nil {
+				log.Fatalf("Failed to connect to index: %s", err)
+				return
+			}
+		}
+
 		if delay > NoDelay {
 			if delay > MaxDelay {
 				delay = MaxDelay
