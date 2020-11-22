@@ -1,0 +1,4 @@
+ARG VERSION=master
+FROM quay.io/acoustid/acoustid-index:$VERSION
+
+CMD ["/aindex", "updater"]
