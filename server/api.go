@@ -1,11 +1,12 @@
 package server
 
 import (
-	"net/http"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/acoustid/go-acoustid/chromaprint"
 	"log"
+	"net/http"
 	"strconv"
 )
 
@@ -49,7 +50,7 @@ func NewWebService() *WebService {
 	ws := &WebService{
 		Mux: http.NewServeMux(),
 	}
-	ws.Mux.HandleFunc("/v2/lookup", ws.HandleV2Lookup)
+	ws.Mux.HandleFunc("/v2/lookup", ws.HandleLookup)
 	return ws
 }
 
@@ -94,7 +95,12 @@ func GetFormat(r *http.Request) (string, error) {
 	return format, nil
 }
 
-func (ws *WebService) HandleV2Lookup(w http.ResponseWriter, r *http.Request) {
+type lookupRequest struct {
+	format   string
+	duration float64
+}
+
+func (req *lookupRequest) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseForm()
 	if err != nil {
 		Error(w, http.StatusBadRequest, ERROR_INTERNAL, "unable to parse HTTP request data")
@@ -113,7 +119,6 @@ func (ws *WebService) HandleV2Lookup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	duration, err := strconv.ParseFloat(durationStr, 64)
-	log.Printf("Duration %v", duration)
 	if err != nil || duration < MinDuration || duration >= MaxDuration {
 		if err != nil {
 			log.Printf("Invalid duration: %s", err)
@@ -122,9 +127,28 @@ func (ws *WebService) HandleV2Lookup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	fingerprintStr := r.FormValue("fingerprint")
+	if fingerprintStr == "" {
+		Error(w, http.StatusBadRequest, ERROR_MISSING_PARAMETER, "missing parameter 'fingerprint'")
+		return
+	}
+	fingerprint, err := chromaprint.ParseFingerprintString(fingerprintStr)
+	if err != nil {
+		log.Printf("Invalid fingerprint: %s", err)
+		Error(w, http.StatusBadRequest, ERROR_INVALID_FINGERPRINT, "invalid fingerprint")
+		return
+	}
+
+	log.Printf("format=%s duration=%s fingerprint=%s", format, duration, fingerprint)
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(fmt.Sprintf("{%s}", format)))
+}
+
+func (ws *WebService) HandleLookup(w http.ResponseWriter, r *http.Request) {
+	var req lookupRequest
+	req.ServeHTTP(w, r)
 }
 
 func RunWebService() error {
