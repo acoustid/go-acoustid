@@ -20,6 +20,16 @@ func NewAPI() *API {
 
 	ws.Mux.Handle("/metrics", promhttp.Handler())
 
+	ws.Mux.HandleFunc("/alive", func(rw http.ResponseWriter, r *http.Request) {
+		rw.WriteHeader(http.StatusOK)
+		rw.Write([]byte("I'm alive\n"))
+	})
+
+	ws.Mux.HandleFunc("/ready", func(rw http.ResponseWriter, r *http.Request) {
+		rw.WriteHeader(http.StatusOK)
+		rw.Write([]byte("I'm ready\n"))
+	})
+
 	ws.Mux.HandleFunc("/v2/lookup", func(rw http.ResponseWriter, r *http.Request) {
 		handler := v2.NewLookupHandler(ws.FingerprintSearcher)
 		handler.ServeHTTP(rw, r)
