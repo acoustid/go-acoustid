@@ -128,8 +128,6 @@ func (handler *LookupHandler) ServeHTTP(rw http.ResponseWriter, r *http.Request)
 			Score: result.Score,
 		}
 	}
-	log.Printf("results %v", results)
-	log.Printf("results %v", response.Results)
 
 	err = WriteResponse(rw, http.StatusOK, format, response)
 	if err != nil {

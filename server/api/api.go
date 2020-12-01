@@ -5,6 +5,7 @@ import (
 
 	v2 "github.com/acoustid/go-acoustid/server/api/v2"
 	"github.com/acoustid/go-acoustid/server/services"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 type API struct {
@@ -16,6 +17,9 @@ func NewAPI() *API {
 	ws := &API{
 		Mux: http.NewServeMux(),
 	}
+
+	ws.Mux.Handle("/metrics", promhttp.Handler())
+
 	ws.Mux.HandleFunc("/v2/lookup", func(rw http.ResponseWriter, r *http.Request) {
 		handler := v2.NewLookupHandler(ws.FingerprintSearcher)
 		handler.ServeHTTP(rw, r)
