@@ -38,8 +38,10 @@ func DecodeResults(encoded string) ([]*pb.Result, error) {
 		if err != nil {
 			return nil, ErrInvalidResultFormat
 		}
-		results[i].Id = uint32(id)
-		results[i].Hits = uint32(hits)
+		results[i] = &pb.Result{
+			Id:   uint32(id),
+			Hits: uint32(hits),
+		}
 	}
 	return results, nil
 }

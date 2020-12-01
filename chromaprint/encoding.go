@@ -6,16 +6,12 @@ package chromaprint
 import (
 	"encoding/base64"
 	"encoding/binary"
+	"fmt"
+
+	"errors"
 
 	"github.com/acoustid/go-acoustid/util"
-	"github.com/pkg/errors"
 )
-
-// Fingerprint contains raw fingerprint data.
-type Fingerprint struct {
-	Version int      // version of the algorithm that generated the fingerprint
-	Hashes  []uint32 // the fingerprint
-}
 
 // DecodeFingerprintString decodes base64-encoded fingerprint string into binary data.
 func DecodeFingerprintString(str string) ([]byte, error) {
@@ -24,7 +20,7 @@ func DecodeFingerprintString(str string) ([]byte, error) {
 	}
 	data, err := base64.RawURLEncoding.DecodeString(str)
 	if err != nil {
-		return nil, errors.Wrap(err, "invalid base64 encoding")
+		return nil, fmt.Errorf("invalid base64 encoding: %w", err)
 	}
 	return data, nil
 }
@@ -35,20 +31,21 @@ func EncodeFingerprintToString(data []byte) string {
 }
 
 // ParseFingerprint reads binary fingerprint data and returns a parsed Fingerprint structure.
-func ParseFingerprint(data []byte) (*Fingerprint, error) {
+func ParseFingerprint(data []byte) (Fingerprint, error) {
 	var fp Fingerprint
 	err := unpackFingerprint(data, &fp)
 	if err != nil {
-		return nil, errors.Wrap(err, "invalid fingerprint")
+		return fp, fmt.Errorf("invalid fingerprint: %w", err)
 	}
-	return &fp, nil
+	return fp, nil
 }
 
 // ParseFingerprintString reads base64-encoded fingerprint string and returns a parsed Fingerprint structure.
-func ParseFingerprintString(str string) (*Fingerprint, error) {
+func ParseFingerprintString(str string) (Fingerprint, error) {
 	data, err := DecodeFingerprintString(str)
 	if err != nil {
-		return nil, err
+		var empty Fingerprint
+		return empty, fmt.Errorf("invalid fingerprint string: %w", err)
 	}
 	return ParseFingerprint(data)
 }
