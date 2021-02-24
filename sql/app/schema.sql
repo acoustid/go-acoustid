@@ -87,6 +87,8 @@ CREATE SEQUENCE public.application_id_seq
 ALTER SEQUENCE public.application_id_seq OWNED BY public.application.id;
 
 
+CREATE INDEX idx_application_apikey ON application (apikey);
+
 
 CREATE TABLE public.format (
     id integer NOT NULL,
