@@ -1,0 +1,5 @@
+FROM scratch
+
+COPY dist/aserver-linux-amd64 /aserver
+
+CMD ["/aserver"]
