@@ -13,7 +13,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const UpdateBatchSize = 1000
+const UpdateBatchSize = 10000
 
 type UpdaterConfig struct {
 	Database *common.DatabaseConfig
