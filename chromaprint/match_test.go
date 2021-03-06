@@ -18,7 +18,7 @@ func loadTestFingerprint(t *testing.T, name string) *Fingerprint {
 	require.NoError(t, err)
 	fp, err := ParseFingerprintString(string(data))
 	require.NoError(t, err)
-	return fp
+	return &fp
 }
 
 func TestMatchFingerprints_NoMatch(t *testing.T) {

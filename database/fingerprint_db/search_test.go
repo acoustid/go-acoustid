@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/acoustid/go-acoustid/common"
 
@@ -18,10 +19,13 @@ func TestScoreSearchMatches(t *testing.T) {
 	db, err := sql.Open("fingerprint_db_tx", t.Name())
 	require.NoError(t, err)
 
+	err = db.Ping()
+	require.NoError(t, err)
+
 	ctx := context.Background()
 
 	fpDB := NewFingerprintDB(db)
-	matches, err := fpDB.ScoreSearchMatches(ctx, []uint32{1, 2, 3}, []int{1})
+	matches, err := fpDB.ScoreSearchMatches(ctx, []uint32{1, 2, 3}, []int{1}, time.Minute)
 	require.NoError(t, err)
 
 	assert.Equal(t, matches, []ScoredSearchMatch{})
