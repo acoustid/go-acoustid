@@ -48,13 +48,6 @@ func RunUpdater(cfg *UpdaterConfig) {
 		return
 	}
 
-	idx, err := ConnectWithConfig(context.Background(), cfg.Index)
-	if err != nil {
-		log.Fatalf("Failed to connect to index: %s", err)
-		return
-	}
-	defer idx.Close(context.Background())
-
 	fpDB := fingerprint_db.NewFingerprintDB(db)
 
 	const NoDelay = 0 * time.Millisecond
@@ -63,22 +56,32 @@ func RunUpdater(cfg *UpdaterConfig) {
 
 	var delay time.Duration
 
-	for {
-		if !idx.IsOK() {
-			log.Infof("Index connection failed, reconnecting...")
-			idx, err = ConnectWithConfig(context.Background(), cfg.Index)
-			if err != nil {
-				log.Fatalf("Failed to connect to index: %s", err)
-				return
-			}
-		}
+	var idx *IndexClient
 
+	for {
 		if delay > NoDelay {
 			if delay > MaxDelay {
 				delay = MaxDelay
 			}
 			log.Debugf("Sleeping for %v", delay)
 			time.Sleep(delay)
+		}
+
+		if idx == nil {
+			idx, err = ConnectWithConfig(context.Background(), cfg.Index)
+			if err != nil {
+				log.Fatalf("Failed to connect to index: %s", err)
+				delay = MaxDelay
+				continue
+			}
+		}
+
+		if !idx.IsOK() {
+			log.Infof("Index connection failed, reconnecting...")
+			idx.Close(context.Background())
+			idx = nil
+			delay = MaxDelay
+			continue
 		}
 
 		ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
@@ -122,5 +125,9 @@ func RunUpdater(cfg *UpdaterConfig) {
 		} else {
 			delay = NoDelay
 		}
+	}
+
+	if idx != nil {
+		idx.Close(context.Background())
 	}
 }
