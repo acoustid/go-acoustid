@@ -30,10 +30,27 @@ func NewAPI() *API {
 		rw.Write([]byte("I'm ready\n"))
 	})
 
-	ws.Mux.HandleFunc("/v2/lookup", func(rw http.ResponseWriter, r *http.Request) {
+	v2Mux := http.NewServeMux()
+
+	v2Mux.HandleFunc("/lookup", func(rw http.ResponseWriter, r *http.Request) {
 		handler := v2.NewLookupHandler(ws.FingerprintSearcher)
 		handler.ServeHTTP(rw, r)
 	})
+
+	v2Mux.HandleFunc("/submit", func(rw http.ResponseWriter, r *http.Request) {
+		http.Error(rw, "Not implemented yet.", http.StatusInternalServerError)
+	})
+
+	v2Mux.HandleFunc("/submission_status", func(rw http.ResponseWriter, r *http.Request) {
+		http.Error(rw, "Not implemented yet.", http.StatusInternalServerError)
+	})
+
+	v2Mux.HandleFunc("/fingerprint", func(rw http.ResponseWriter, r *http.Request) {
+		http.Error(rw, "Not implemented yet.", http.StatusInternalServerError)
+	})
+
+	ws.Mux.Handle("/v2/", DecompressRequestBody(v2Mux))
+
 	return ws
 }
 
