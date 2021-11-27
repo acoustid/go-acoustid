@@ -22,7 +22,7 @@ jobs:
         entrypoint: /bin/bash
         args: ./dev/create-db.sh
       env:
-        ACOUSTID_SQL_DIR: sql
+        ACOUSTID_SQL_DIR: database/sql
         POSTGRES_DB: postgres
         POSTGRES_USER: postgres
         POSTGRES_PASSWORD: password
