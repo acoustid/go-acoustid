@@ -27,6 +27,7 @@ func NewProxyConfig() *ProxyConfig {
 }
 
 type Proxy struct {
+	pb.UnimplementedIndexServer
 	Config *ProxyConfig
 	Pool   *IndexClientPool
 }

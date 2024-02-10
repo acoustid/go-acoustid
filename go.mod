@@ -7,7 +7,6 @@ require (
 	github.com/dchest/safefile v0.0.0-20151022103144-855e8d98f185
 	github.com/fortytw2/leaktest v1.3.0 // indirect
 	github.com/go-sql-driver/mysql v1.4.0 // indirect
-	github.com/golang/protobuf v1.5.3
 	github.com/jolestar/go-commons-pool v2.0.0+incompatible
 	github.com/lib/pq v1.2.0
 	github.com/pkg/errors v0.9.1
@@ -17,4 +16,5 @@ require (
 	github.com/urfave/cli v1.22.1
 	go4.org v0.0.0-20190919214946-0cfe6e5be80f
 	google.golang.org/grpc v1.56.3
+	google.golang.org/protobuf v1.30.0
 )
