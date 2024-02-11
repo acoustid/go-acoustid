@@ -16,6 +16,7 @@ import (
 type FingerprintStoreService struct {
 	pb.UnimplementedFingerprintStoreServer
 	store FingerprintStore
+	index FingerprintIndex
 	cache FingerprintCache
 }
 
@@ -29,8 +30,8 @@ func RunFingerprintStoreServer(listenAddr string, service pb.FingerprintStoreSer
 	return server.Serve(lis)
 }
 
-func NewFingerprintStoreService(store FingerprintStore, cache FingerprintCache) *FingerprintStoreService {
-	return &FingerprintStoreService{store: store, cache: cache}
+func NewFingerprintStoreService(store FingerprintStore, index FingerprintIndex, cache FingerprintCache) *FingerprintStoreService {
+	return &FingerprintStoreService{store: store, index: index, cache: cache}
 }
 
 // Implement Insert method

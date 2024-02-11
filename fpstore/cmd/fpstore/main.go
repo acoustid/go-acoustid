@@ -1,13 +1,18 @@
 package main
 
 import (
+	"net"
 	"os"
+	"strconv"
 
 	_ "github.com/lib/pq"
 	"github.com/pkg/errors"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 
 	"github.com/acoustid/go-acoustid/common"
 	"github.com/acoustid/go-acoustid/fpstore"
+	index_pb "github.com/acoustid/go-acoustid/proto/index"
 	"github.com/redis/go-redis/v9"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
@@ -54,11 +59,18 @@ var PostgresDatabase = cli.StringFlag{
 	EnvVar: "FPSTORE_POSTGRES_DATABASE",
 }
 
-var RedisAddrFlag = cli.StringFlag{
-	Name:   "redis-addr",
+var RedisHostFlag = cli.StringFlag{
+	Name:   "redis-host",
 	Usage:  "Redis server address",
 	Value:  "localhost:6379",
 	EnvVar: "FPSTORE_REDIS_ADDR",
+}
+
+var RedisPortFlag = cli.IntFlag{
+	Name:   "redis-port",
+	Usage:  "Redis server port",
+	Value:  6379,
+	EnvVar: "FPSTORE_REDIS_PORT",
 }
 
 var RedisDatabaseFlag = cli.IntFlag{
@@ -75,15 +87,37 @@ var RedisPasswordFlag = cli.StringFlag{
 	EnvVar: "FPSTORE_REDIS_PASSWORD",
 }
 
-var ListenAddrFlag = cli.StringFlag{
-	Name:  "listen-addr",
-	Usage: "Listen address",
-	Value: "localhost:4659",
+var ListenHostFlag = cli.StringFlag{
+	Name:   "listen-host",
+	Usage:  "Listen address",
+	Value:  "localhost",
+	EnvVar: "FPSTORE_LISTEN_HOST",
+}
+
+var ListenPortFlag = cli.IntFlag{
+	Name:   "listen-port",
+	Usage:  "Listen port",
+	Value:  4659,
+	EnvVar: "FPSTORE_LISTEN_PORT",
+}
+
+var IndexHostFlag = cli.StringFlag{
+	Name:   "index-host",
+	Usage:  "Index server address",
+	Value:  "localhost",
+	EnvVar: "FPSTORE_INDEX_HOST",
+}
+
+var IndexPortFlag = cli.IntFlag{
+	Name:   "index-port",
+	Usage:  "Index server port",
+	Value:  6080,
+	EnvVar: "FPSTORE_INDEX_PORT",
 }
 
 func PrepareFingerprintCache(c *cli.Context) (fpstore.FingerprintCache, error) {
 	return fpstore.NewRedisFingerprintCache(&redis.Options{
-		Addr:     c.String(RedisAddrFlag.Name),
+		Addr:     net.JoinHostPort(c.String(RedisHostFlag.Name), strconv.Itoa(c.Int(RedisPortFlag.Name))),
 		Password: c.String(RedisPasswordFlag.Name),
 		DB:       c.Int(RedisDatabaseFlag.Name),
 	}), nil
@@ -105,20 +139,36 @@ func PrepareFingerprintStore(c *cli.Context) (fpstore.FingerprintStore, error) {
 	return fpstore.NewPostgresFingerprintStore(db), nil
 }
 
-func PrepareAndRunServer(c *cli.Context) error {
-	fingerprintCache, err := PrepareFingerprintCache(c)
+func PrepareFingerprintIndex(c *cli.Context) (fpstore.FingerprintIndex, error) {
+	addr := net.JoinHostPort(c.String(IndexHostFlag.Name), strconv.Itoa(c.Int(IndexPortFlag.Name)))
+	conn, err := grpc.Dial(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
-		return errors.WithMessage(err, "failed to initialize fingerprint cache")
+		return nil, errors.WithMessage(err, "failed to connect to index server")
 	}
+	client := index_pb.NewIndexClient(conn)
+	return fpstore.NewFingerprintIndexClient(client), nil
+}
 
+func PrepareAndRunServer(c *cli.Context) error {
 	fingerprintStore, err := PrepareFingerprintStore(c)
 	if err != nil {
 		return errors.WithMessage(err, "failed to initialize fingerprint store")
 	}
 
-	service := fpstore.NewFingerprintStoreService(fingerprintStore, fingerprintCache)
+	fingerprintIndex, err := PrepareFingerprintIndex(c)
+	if err != nil {
+		return errors.WithMessage(err, "failed to initialize fingerprint index")
+	}
 
-	return fpstore.RunFingerprintStoreServer(c.String(ListenAddrFlag.Name), service)
+	fingerprintCache, err := PrepareFingerprintCache(c)
+	if err != nil {
+		return errors.WithMessage(err, "failed to initialize fingerprint cache")
+	}
+
+	service := fpstore.NewFingerprintStoreService(fingerprintStore, fingerprintIndex, fingerprintCache)
+
+	listenAddr := net.JoinHostPort(c.String(ListenHostFlag.Name), strconv.Itoa(c.Int(ListenPortFlag.Name)))
+	return fpstore.RunFingerprintStoreServer(listenAddr, service)
 }
 
 func CreateApp() *cli.App {
@@ -133,10 +183,19 @@ func CreateApp() *cli.App {
 			Name:  "server",
 			Usage: "Runs fpstore service",
 			Flags: []cli.Flag{
-				ListenAddrFlag,
-				RedisAddrFlag,
+				ListenHostFlag,
+				ListenPortFlag,
+				PostgresHost,
+				PostgresPort,
+				PostgresUser,
+				PostgresPassword,
+				PostgresDatabase,
+				RedisHostFlag,
+				RedisPortFlag,
 				RedisPasswordFlag,
 				RedisDatabaseFlag,
+				IndexHostFlag,
+				IndexPortFlag,
 			},
 			Action: PrepareAndRunServer,
 		},

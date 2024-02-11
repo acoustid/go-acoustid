@@ -11,6 +11,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/acoustid/go-acoustid/index"
 	pb "github.com/acoustid/go-acoustid/proto/fpstore"
 )
 
@@ -69,7 +70,8 @@ func (a *Uint32Array) scanString(src string) error {
 }
 
 type PostgresFingerprintStore struct {
-	db *sql.DB
+	db  *sql.DB
+	idx *index.IndexClientPool
 }
 
 func NewPostgresFingerprintStore(db *sql.DB) *PostgresFingerprintStore {
