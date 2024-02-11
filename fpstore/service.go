@@ -98,6 +98,9 @@ func (s *FingerprintStoreService) Get(ctx context.Context, req *pb.GetFingerprin
 func (s *FingerprintStoreService) Compare(ctx context.Context, req *pb.CompareFingerprintRequest) (*pb.CompareFingerprintResponse, error) {
 	var resp pb.CompareFingerprintResponse
 	for _, id := range req.Ids {
+		if ctx.Err() == context.Canceled {
+			return nil, status.Error(codes.Canceled, "request canceled")
+		}
 		if id == 0 {
 			return nil, status.Error(codes.InvalidArgument, "id is required")
 		}
@@ -106,7 +109,7 @@ func (s *FingerprintStoreService) Compare(ctx context.Context, req *pb.CompareFi
 			return nil, status.Error(codes.Internal, fmt.Sprintf("failed to get fingerprint %d", id))
 		}
 		if fp == nil {
-			return nil, status.Error(codes.NotFound, fmt.Sprintf("fingerprint %d not found", id))
+			continue
 		}
 		score, err := s.compareFingerprints(ctx, req.Fingerprint, fp)
 		resp.Results = append(resp.Results, &pb.MatchingFingerprint{Id: id, Similarity: float32(score)})
