@@ -3,17 +3,21 @@ syntax = "proto3";
 package fpstore;
 option go_package = "github.com/acoustid/go-acoustid/proto/fpstore;fpstore";
 
-message AddFingerprintRequest {
+message Fingerprint {
   repeated uint32 hashes = 1;
 }
 
-message AddFingerprintResponse {
+message InsertFingerprintRequest {
+  Fingerprint Fingerprint = 1;
+}
+
+message InsertFingerprintResponse {
   uint64 id = 1;
 }
 
 message UpdateFingerprintRequest {
   uint64 id = 1;
-  repeated uint32 hashes = 2;
+  Fingerprint fingerprint = 2;
 }
 
 message UpdateFingerprintResponse {
@@ -31,13 +35,12 @@ message GetFingerprintRequest {
 }
 
 message GetFingerprintResponse {
-  uint64 id = 1;
-  repeated uint32 hashes = 2;
+  Fingerprint fingerprint = 1;
 }
 
 message CompareFingerprintRequest {
-  repeated uint64 ids = 1;
-  repeated uint64 hashes = 2;
+  Fingerprint fingerprint = 1;
+  repeated uint64 ids = 2;
 }
 
 message MatchingFingerprint {
@@ -50,7 +53,7 @@ message CompareFingerprintResponse {
 }
 
 message SearchFingerprintRequest {
-  repeated uint32 hashes = 1;
+  Fingerprint fingerprint = 1;
   int32 limit = 2;
 }
 
@@ -59,7 +62,7 @@ message SearchFingerprintResponse {
 }
 
 service FingerprintStore {
-  rpc Add(AddFingerprintRequest) returns (AddFingerprintResponse) {}
+  rpc Insert(InsertFingerprintRequest) returns (InsertFingerprintResponse) {}
   rpc Update(UpdateFingerprintRequest) returns (UpdateFingerprintResponse) {}
   rpc Delete(DeleteFingerprintRequest) returns (DeleteFingerprintResponse) {}
 

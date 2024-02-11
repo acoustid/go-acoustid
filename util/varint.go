@@ -21,10 +21,9 @@ func PutUvarint32(buf []byte, x uint32) int {
 // number of bytes read (> 0). If an error occurred, the value is 0
 // and the number of bytes n is <= 0 meaning:
 //
-//	n == 0: buf too small
-//	n  < 0: value larger than 32 bits (overflow)
-//              and -n is the number of bytes read
-//
+//		n == 0: buf too small
+//		n  < 0: value larger than 32 bits (overflow)
+//	             and -n is the number of bytes read
 func Uvarint32(buf []byte) (uint32, int) {
 	var x uint32
 	var s uint

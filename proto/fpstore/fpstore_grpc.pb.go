@@ -18,7 +18,7 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type FingerprintStoreClient interface {
-	Add(ctx context.Context, in *AddFingerprintRequest, opts ...grpc.CallOption) (*AddFingerprintResponse, error)
+	Insert(ctx context.Context, in *InsertFingerprintRequest, opts ...grpc.CallOption) (*InsertFingerprintResponse, error)
 	Update(ctx context.Context, in *UpdateFingerprintRequest, opts ...grpc.CallOption) (*UpdateFingerprintResponse, error)
 	Delete(ctx context.Context, in *DeleteFingerprintRequest, opts ...grpc.CallOption) (*DeleteFingerprintResponse, error)
 	Get(ctx context.Context, in *GetFingerprintRequest, opts ...grpc.CallOption) (*GetFingerprintResponse, error)
@@ -34,9 +34,9 @@ func NewFingerprintStoreClient(cc grpc.ClientConnInterface) FingerprintStoreClie
 	return &fingerprintStoreClient{cc}
 }
 
-func (c *fingerprintStoreClient) Add(ctx context.Context, in *AddFingerprintRequest, opts ...grpc.CallOption) (*AddFingerprintResponse, error) {
-	out := new(AddFingerprintResponse)
-	err := c.cc.Invoke(ctx, "/fpstore.FingerprintStore/Add", in, out, opts...)
+func (c *fingerprintStoreClient) Insert(ctx context.Context, in *InsertFingerprintRequest, opts ...grpc.CallOption) (*InsertFingerprintResponse, error) {
+	out := new(InsertFingerprintResponse)
+	err := c.cc.Invoke(ctx, "/fpstore.FingerprintStore/Insert", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -92,7 +92,7 @@ func (c *fingerprintStoreClient) Compare(ctx context.Context, in *CompareFingerp
 // All implementations must embed UnimplementedFingerprintStoreServer
 // for forward compatibility
 type FingerprintStoreServer interface {
-	Add(context.Context, *AddFingerprintRequest) (*AddFingerprintResponse, error)
+	Insert(context.Context, *InsertFingerprintRequest) (*InsertFingerprintResponse, error)
 	Update(context.Context, *UpdateFingerprintRequest) (*UpdateFingerprintResponse, error)
 	Delete(context.Context, *DeleteFingerprintRequest) (*DeleteFingerprintResponse, error)
 	Get(context.Context, *GetFingerprintRequest) (*GetFingerprintResponse, error)
@@ -105,8 +105,8 @@ type FingerprintStoreServer interface {
 type UnimplementedFingerprintStoreServer struct {
 }
 
-func (UnimplementedFingerprintStoreServer) Add(context.Context, *AddFingerprintRequest) (*AddFingerprintResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Add not implemented")
+func (UnimplementedFingerprintStoreServer) Insert(context.Context, *InsertFingerprintRequest) (*InsertFingerprintResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Insert not implemented")
 }
 func (UnimplementedFingerprintStoreServer) Update(context.Context, *UpdateFingerprintRequest) (*UpdateFingerprintResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Update not implemented")
@@ -136,20 +136,20 @@ func RegisterFingerprintStoreServer(s grpc.ServiceRegistrar, srv FingerprintStor
 	s.RegisterService(&FingerprintStore_ServiceDesc, srv)
 }
 
-func _FingerprintStore_Add_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(AddFingerprintRequest)
+func _FingerprintStore_Insert_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(InsertFingerprintRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(FingerprintStoreServer).Add(ctx, in)
+		return srv.(FingerprintStoreServer).Insert(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/fpstore.FingerprintStore/Add",
+		FullMethod: "/fpstore.FingerprintStore/Insert",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(FingerprintStoreServer).Add(ctx, req.(*AddFingerprintRequest))
+		return srv.(FingerprintStoreServer).Insert(ctx, req.(*InsertFingerprintRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -252,8 +252,8 @@ var FingerprintStore_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*FingerprintStoreServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "Add",
-			Handler:    _FingerprintStore_Add_Handler,
+			MethodName: "Insert",
+			Handler:    _FingerprintStore_Insert_Handler,
 		},
 		{
 			MethodName: "Update",
