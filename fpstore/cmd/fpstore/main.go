@@ -7,12 +7,10 @@ import (
 
 	_ "github.com/lib/pq"
 	"github.com/pkg/errors"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 
 	"github.com/acoustid/go-acoustid/common"
 	"github.com/acoustid/go-acoustid/fpstore"
-	index_pb "github.com/acoustid/go-acoustid/proto/index"
+	"github.com/acoustid/go-acoustid/index"
 	"github.com/redis/go-redis/v9"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
@@ -140,13 +138,13 @@ func PrepareFingerprintStore(c *cli.Context) (fpstore.FingerprintStore, error) {
 }
 
 func PrepareFingerprintIndex(c *cli.Context) (fpstore.FingerprintIndex, error) {
-	addr := net.JoinHostPort(c.String(IndexHostFlag.Name), strconv.Itoa(c.Int(IndexPortFlag.Name)))
-	conn, err := grpc.Dial(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		return nil, errors.WithMessage(err, "failed to connect to index server")
-	}
-	client := index_pb.NewIndexClient(conn)
-	return fpstore.NewFingerprintIndexClient(client), nil
+	config := index.NewIndexConfig()
+	config.Host = c.String(IndexHostFlag.Name)
+	config.Port = c.Int(IndexPortFlag.Name)
+
+	const MaxConnections = 1000
+	clientPool := index.NewIndexClientPool(config, MaxConnections)
+	return fpstore.NewFingerprintIndexClient(clientPool), nil
 }
 
 func PrepareAndRunServer(c *cli.Context) error {

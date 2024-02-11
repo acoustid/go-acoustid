@@ -4,6 +4,7 @@ import (
 	"context"
 	"sort"
 
+	"github.com/acoustid/go-acoustid/index"
 	pb "github.com/acoustid/go-acoustid/proto/fpstore"
 	index_pb "github.com/acoustid/go-acoustid/proto/index"
 )
@@ -13,11 +14,11 @@ type FingerprintIndex interface {
 }
 
 type FingerprintIndexClient struct {
-	client index_pb.IndexClient
+	clientPool *index.IndexClientPool
 }
 
-func NewFingerprintIndexClient(client index_pb.IndexClient) *FingerprintIndexClient {
-	return &FingerprintIndexClient{client: client}
+func NewFingerprintIndexClient(clientPool *index.IndexClientPool) *FingerprintIndexClient {
+	return &FingerprintIndexClient{clientPool: clientPool}
 }
 
 // Legacy compatibility with https://github.com/acoustid/pg_acoustid/blob/main/acoustid_compare.c#L348
@@ -84,7 +85,7 @@ func filterIndexSearchResults(results []*index_pb.Result, limit int) []*index_pb
 
 func (c *FingerprintIndexClient) Search(ctx context.Context, fp *pb.Fingerprint, limit int) ([]uint64, error) {
 	req := &index_pb.SearchRequest{Hashes: ExtractLegacyQuery(fp)}
-	resp, err := c.client.Search(ctx, req)
+	resp, err := c.clientPool.Search(ctx, req)
 	if err != nil {
 		return nil, err
 	}
