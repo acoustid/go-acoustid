@@ -384,7 +384,8 @@ func countUniqueHashes(hashes []uint32, numBits int) int {
 	return uniqueCount
 }
 
-// This is supposed to calculate a scope similar to https://github.com/acoustid/pg_acoustid/blob/main/acoustid_compare.c#L122
+// This is supposed to calculate a single score similar to https://github.com/acoustid/pg_acoustid/blob/main/acoustid_compare.c#L122
+// It's only used for legacy reasons and will be replaced in the future
 func CompareAlignedFingerprints(a *Fingerprint, b *Fingerprint, offset OffsetHit) (float64, error) {
 	ahashes := a.Hashes
 	bhashes := b.Hashes
@@ -432,7 +433,7 @@ func CompareAlignedFingerprints(a *Fingerprint, b *Fingerprint, offset OffsetHit
 		bitError += uint64(util.PopCount32(ahashes[i] ^ bhashes[i]))
 	}
 
-	score := (float64(size) * 2.0 / float64(minSize)) * (1.0 - 2.0*float64(bitError)/float64(size*32))
+	score := (float64(size) / float64(minSize)) * (1.0 - float64(bitError)/float64(size*32))
 	if score < 0.0 {
 		score = 0.0
 	}

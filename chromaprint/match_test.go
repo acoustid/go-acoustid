@@ -70,3 +70,30 @@ func TestMatchFingerprints_FullMatch3(t *testing.T) {
 		assert.Equal(t, "17.580979s", result.MatchingDuration().String())
 	}
 }
+
+func TestCompareFingerprints_NoMatch(t *testing.T) {
+	master := loadTestFingerprint(t, "calibre_sunrise")
+	query := loadTestFingerprint(t, "radio1_1_ad")
+	score, err := CompareFingerprints(master, query)
+	if assert.NoError(t, err) {
+		assert.Equal(t, 0.0, score)
+	}
+}
+
+func TestCompareFingerprints_FullMatch1(t *testing.T) {
+	master := loadTestFingerprint(t, "calibre_sunrise")
+	query := loadTestFingerprint(t, "radio1_3_calibre_sunshine")
+	score, err := CompareFingerprints(master, query)
+	if assert.NoError(t, err) {
+		assert.InDelta(t, 0.9, score, 0.1)
+	}
+}
+
+func TestCompareFingerprints_PartialMatch(t *testing.T) {
+	master := loadTestFingerprint(t, "calibre_sunrise")
+	query := loadTestFingerprint(t, "radio1_2_ad_and_calibre_sunshine")
+	score, err := CompareFingerprints(master, query)
+	if assert.NoError(t, err) {
+		assert.InDelta(t, 0.7, score, 0.1)
+	}
+}
