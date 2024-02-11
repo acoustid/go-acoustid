@@ -99,7 +99,7 @@ func (s *SqlFingerprintStore) getV1(ctx context.Context, id uint64) (*pb.Fingerp
 	err := s.db.QueryRowContext(ctx, query, id).Scan(&hashes)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return nil, ErrFingerprintNotFound
+			return nil, nil
 		}
 		return nil, err
 	}
@@ -112,7 +112,7 @@ func (s *SqlFingerprintStore) getV2(ctx context.Context, id uint64) (*pb.Fingerp
 	err := s.db.QueryRowContext(ctx, query, id).Scan(&data)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return nil, ErrFingerprintNotFound
+			return nil, nil
 		}
 		return nil, err
 	}
@@ -122,17 +122,14 @@ func (s *SqlFingerprintStore) getV2(ctx context.Context, id uint64) (*pb.Fingerp
 func (s *SqlFingerprintStore) Get(ctx context.Context, id uint64) (*pb.Fingerprint, error) {
 	fp, err := s.getV2(ctx, id)
 	if err != nil {
-		if err != ErrFingerprintNotFound {
-			log.Warnf("failed to get fingerprint from v2 table: %v", err)
-			return nil, err
-		}
+		log.Warnf("failed to get fingerprint from v2 table: %v", err)
+		return nil, err
+	}
+	if fp == nil {
 		fp, err = s.getV1(ctx, id)
 		if err != nil {
-			if err != ErrFingerprintNotFound {
-				log.Warnf("failed to get fingerprint from v1 table: %v", err)
-				return nil, err
-			}
-			return nil, ErrFingerprintNotFound
+			log.Warnf("failed to get fingerprint from v1 table: %v", err)
+			return nil, err
 		}
 	}
 	return fp, nil
