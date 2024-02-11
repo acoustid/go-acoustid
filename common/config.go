@@ -1,11 +1,14 @@
 package common
 
 import (
+	"database/sql"
 	"fmt"
 	"net"
 	"net/url"
 	"os"
 	"strconv"
+
+	_ "github.com/lib/pq"
 )
 
 type DatabaseConfig struct {
@@ -48,6 +51,10 @@ func (cfg *DatabaseConfig) URL() *url.URL {
 	params.Add("sslmode", "disable")
 	u.RawQuery = params.Encode()
 	return &u
+}
+
+func (cfg *DatabaseConfig) Connect() (*sql.DB, error) {
+	return sql.Open("postgres", cfg.URL().String())
 }
 
 func (cfg *DatabaseConfig) readEnv(prefix string) {

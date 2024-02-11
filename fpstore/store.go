@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"database/sql/driver"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -67,15 +68,15 @@ func (a *Uint32Array) scanString(src string) error {
 	return nil
 }
 
-type SqlFingerprintStore struct {
+type PostgresFingerprintStore struct {
 	db *sql.DB
 }
 
-func NewSqlFingerprintStore(db *sql.DB) *SqlFingerprintStore {
-	return &SqlFingerprintStore{db: db}
+func NewPostgresFingerprintStore(db *sql.DB) *PostgresFingerprintStore {
+	return &PostgresFingerprintStore{db: db}
 }
 
-func (s *SqlFingerprintStore) Insert(ctx context.Context, fp *pb.Fingerprint) (uint64, error) {
+func (s *PostgresFingerprintStore) Insert(ctx context.Context, fp *pb.Fingerprint) (uint64, error) {
 	data, err := EncodeFingerprint(fp)
 	if err != nil {
 		return 0, err
@@ -88,12 +89,30 @@ func (s *SqlFingerprintStore) Insert(ctx context.Context, fp *pb.Fingerprint) (u
 	return id, nil
 }
 
-func (s *SqlFingerprintStore) Delete(ctx context.Context, id uint64) error {
-	_, err := s.db.ExecContext(ctx, "DELETE FROM fingerprint_v2 WHERE id = $1", id)
+var ErrCannotDeleteLegacyFingerprint = errors.New("cannot delete legacy fingerprint")
+
+func (s *PostgresFingerprintStore) Delete(ctx context.Context, id uint64) error {
+	existsAsV1, err := s.checkV1(ctx, id)
+	if err != nil {
+		return err
+	}
+	if existsAsV1 {
+		return ErrCannotDeleteLegacyFingerprint
+	}
+	_, err = s.db.ExecContext(ctx, "DELETE FROM fingerprint_v2 WHERE id = $1", id)
 	return err
 }
 
-func (s *SqlFingerprintStore) getV1(ctx context.Context, id uint64) (*pb.Fingerprint, error) {
+func (s *PostgresFingerprintStore) checkV1(ctx context.Context, id uint64) (bool, error) {
+	var count int
+	err := s.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM fingerprint WHERE id = $1", id).Scan(&count)
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}
+
+func (s *PostgresFingerprintStore) getV1(ctx context.Context, id uint64) (*pb.Fingerprint, error) {
 	var hashes Uint32Array
 	query := "SELECT fingerprint FROM fingerprint WHERE id = $1"
 	err := s.db.QueryRowContext(ctx, query, id).Scan(&hashes)
@@ -106,7 +125,7 @@ func (s *SqlFingerprintStore) getV1(ctx context.Context, id uint64) (*pb.Fingerp
 	return &pb.Fingerprint{Hashes: hashes}, nil
 }
 
-func (s *SqlFingerprintStore) getV2(ctx context.Context, id uint64) (*pb.Fingerprint, error) {
+func (s *PostgresFingerprintStore) getV2(ctx context.Context, id uint64) (*pb.Fingerprint, error) {
 	var data []byte
 	query := "SELECT data FROM fingerprint_v2 WHERE id = $1"
 	err := s.db.QueryRowContext(ctx, query, id).Scan(&data)
@@ -119,7 +138,7 @@ func (s *SqlFingerprintStore) getV2(ctx context.Context, id uint64) (*pb.Fingerp
 	return DecodeFingerprint(data)
 }
 
-func (s *SqlFingerprintStore) Get(ctx context.Context, id uint64) (*pb.Fingerprint, error) {
+func (s *PostgresFingerprintStore) Get(ctx context.Context, id uint64) (*pb.Fingerprint, error) {
 	fp, err := s.getV2(ctx, id)
 	if err != nil {
 		log.Warnf("failed to get fingerprint from v2 table: %v", err)

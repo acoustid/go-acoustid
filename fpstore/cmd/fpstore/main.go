@@ -1,7 +1,6 @@
 package main
 
 import (
-	"database/sql"
 	"os"
 
 	_ "github.com/lib/pq"
@@ -98,11 +97,12 @@ func PrepareFingerprintStore(c *cli.Context) (fpstore.FingerprintStore, error) {
 	config.Password = c.String(PostgresPassword.Name)
 	config.Database = c.String(PostgresDatabase.Name)
 
-	db, err := sql.Open("postgres", config.URL().String())
+	db, err := config.Connect()
 	if err != nil {
-		return nil, err
+		return nil, errors.WithMessage(err, "failed to connect to database")
 	}
-	return fpstore.NewSqlFingerprintStore(db), nil
+
+	return fpstore.NewPostgresFingerprintStore(db), nil
 }
 
 func PrepareAndRunServer(c *cli.Context) error {
