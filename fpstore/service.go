@@ -2,9 +2,11 @@ package fpstore
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net"
 
+	"github.com/acoustid/go-acoustid/chromaprint"
 	pb "github.com/acoustid/go-acoustid/proto/fpstore"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -49,12 +51,7 @@ func (s *FingerprintStoreService) Insert(ctx context.Context, req *pb.InsertFing
 	return &pb.InsertFingerprintResponse{Id: id}, nil
 }
 
-// Implement Get method
-func (s *FingerprintStoreService) Get(ctx context.Context, req *pb.GetFingerprintRequest) (*pb.GetFingerprintResponse, error) {
-	id := req.Id
-	if id == 0 {
-		return nil, status.Error(codes.InvalidArgument, "id is required")
-	}
+func (s *FingerprintStoreService) getFingerprint(ctx context.Context, id uint64) (*pb.Fingerprint, error) {
 	fp, err := s.cache.Get(ctx, id)
 	if err != nil {
 		log.Printf("failed to get fingerprint from cache: %v", err)
@@ -63,12 +60,56 @@ func (s *FingerprintStoreService) Get(ctx context.Context, req *pb.GetFingerprin
 		fp, err = s.store.Get(ctx, id)
 		if err != nil {
 			log.Printf("failed to get fingerprint from store: %v", err)
-			return nil, status.Error(codes.Internal, "failed to get fingerprint")
+			return nil, err
 		}
 		if fp == nil {
-			return nil, status.Error(codes.NotFound, "fingerprint not found")
+			return nil, nil
 		}
 		s.cache.Set(ctx, id, fp)
 	}
+	return fp, nil
+}
+
+func (s *FingerprintStoreService) compareFingerprints(ctx context.Context, a, b *pb.Fingerprint) (float64, error) {
+	if len(a.Hashes) == 0 || len(b.Hashes) == 0 {
+		return 0, nil
+	}
+	a2 := chromaprint.Fingerprint{Version: int(a.Version), Hashes: a.Hashes}
+	b2 := chromaprint.Fingerprint{Version: int(b.Version), Hashes: b.Hashes}
+	return chromaprint.CompareFingerprints(&a2, &b2)
+}
+
+// Implement Get method
+func (s *FingerprintStoreService) Get(ctx context.Context, req *pb.GetFingerprintRequest) (*pb.GetFingerprintResponse, error) {
+	id := req.Id
+	if id == 0 {
+		return nil, status.Error(codes.InvalidArgument, "id is required")
+	}
+	fp, err := s.getFingerprint(ctx, id)
+	if err != nil {
+		return nil, status.Error(codes.Internal, fmt.Sprintf("failed to get fingerprint %d", id))
+	}
+	if fp == nil {
+		return nil, status.Error(codes.NotFound, fmt.Sprintf("fingerprint %d not found", id))
+	}
 	return &pb.GetFingerprintResponse{Fingerprint: fp}, nil
+}
+
+func (s *FingerprintStoreService) Compare(ctx context.Context, req *pb.CompareFingerprintRequest) (*pb.CompareFingerprintResponse, error) {
+	var resp pb.CompareFingerprintResponse
+	for _, id := range req.Ids {
+		if id == 0 {
+			return nil, status.Error(codes.InvalidArgument, "id is required")
+		}
+		fp, err := s.getFingerprint(ctx, id)
+		if err != nil {
+			return nil, status.Error(codes.Internal, fmt.Sprintf("failed to get fingerprint %d", id))
+		}
+		if fp == nil {
+			return nil, status.Error(codes.NotFound, fmt.Sprintf("fingerprint %d not found", id))
+		}
+		score, err := s.compareFingerprints(ctx, req.Fingerprint, fp)
+		resp.Results = append(resp.Results, &pb.MatchingFingerprint{Id: id, Similarity: float32(score)})
+	}
+	return &resp, nil
 }

@@ -16,6 +16,7 @@ import (
 
 const NumQueryBits = 26
 const NumAlignBits = 14
+const NumUniqBits = 16
 const NumOffsetCandidates = 3
 const MaxOffsetThresholdDiv = 10
 
@@ -29,13 +30,13 @@ func hashBitMask(nbits int) uint32 {
 	return mask
 }
 
-func ExtractQuery(fp *Fingerprint) []int32 {
-	mask := hashBitMask(NumQueryBits)
-	query := make([]int32, len(fp.Hashes))
-	for i := 0; i < len(fp.Hashes); i++ {
-		query[i] = int32(fp.Hashes[i] & mask)
+func ExtractQuery(fp *Fingerprint, numBits int) *Fingerprint {
+	mask := hashBitMask(numBits)
+	query := *fp
+	for i, hash := range query.Hashes {
+		query.Hashes[i] = hash & mask
 	}
-	return query
+	return &query
 }
 
 type FingerprintConfig struct {
@@ -136,9 +137,51 @@ type MatchingSection struct {
 	Score  float64
 }
 
-var ErrInvalidFingerprintVersion = errors.New("inv alid fingerprint version")
+var ErrInvalidFingerprintVersion = errors.New("invalid fingerprint version")
 
-func MatchFingerprints(master *Fingerprint, query *Fingerprint) (*MatchResult, error) {
+type FingerprintMatcher struct {
+	NumQueryBits        int
+	NumAlignBits        int
+	MaxOffsetCandidates int
+}
+
+func NewFingerprintMatcher() *FingerprintMatcher {
+	return &FingerprintMatcher{
+		NumAlignBits:        14,
+		MaxOffsetCandidates: 3,
+	}
+}
+
+func (fm *FingerprintMatcher) Compare(master *Fingerprint, query *Fingerprint) (float64, error) {
+	if master.Version != query.Version {
+		return 0, ErrInvalidFingerprintVersion
+	}
+	_, exists := FingerprintConfigs[master.Version]
+	if !exists {
+		return 0, ErrInvalidFingerprintVersion
+	}
+
+	if len(master.Hashes) >= 1<<16 {
+		return 0, errors.New("master fingerprint too long")
+	}
+	if len(query.Hashes) >= 1<<16 {
+		return 0, errors.New("query fingerprint too long")
+	}
+
+	offsetHits := AlignFingerprints(master, query, fm.NumAlignBits, 1)
+	if len(offsetHits) == 0 {
+		return 0, nil
+	}
+
+	score, err := CompareAlignedFingerprints(master, query, offsetHits[0])
+	if err != nil {
+		return 0, errors.WithMessage(err, "comparing failed")
+	}
+
+	return score, nil
+}
+
+func (fm *FingerprintMatcher) Match(master *Fingerprint, query *Fingerprint) (*MatchResult, error) {
 	if master.Version != query.Version {
 		return nil, ErrInvalidFingerprintVersion
 	}
@@ -161,9 +204,9 @@ func MatchFingerprints(master *Fingerprint, query *Fingerprint) (*MatchResult, e
 		QueryLength:  len(query.Hashes),
 	}
 
-	offsetPeaks := alignFingerprints(master, query, NumOffsetCandidates)
-	for _, peak := range offsetPeaks {
-		sections, err := matchAlignedFingerprints(master, query, peak.Offset)
+	offsetHits := AlignFingerprints(master, query, fm.NumAlignBits, fm.MaxOffsetCandidates)
+	for _, hit := range offsetHits {
+		sections, err := matchAlignedFingerprints(master, query, hit.Offset)
 		if err != nil {
 			return nil, errors.WithMessage(err, "matching failed")
 		}
@@ -174,6 +217,16 @@ func MatchFingerprints(master *Fingerprint, query *Fingerprint) (*MatchResult, e
 	}
 
 	return result, nil
+}
+
+func CompareFingerprints(master *Fingerprint, query *Fingerprint) (float64, error) {
+	matcher := NewFingerprintMatcher()
+	return matcher.Compare(master, query)
+}
+
+func MatchFingerprints(master *Fingerprint, query *Fingerprint) (*MatchResult, error) {
+	matcher := NewFingerprintMatcher()
+	return matcher.Match(master, query)
 }
 
 func matchAlignedFingerprints(master *Fingerprint, query *Fingerprint, offset int) ([]MatchingSection, error) {
@@ -237,11 +290,11 @@ func matchAlignedFingerprints(master *Fingerprint, query *Fingerprint, offset in
 
 type OffsetHit struct {
 	Offset int
-	Count  int
+	Count  float64
 }
 
-func alignFingerprints(master *Fingerprint, query *Fingerprint, maxOffsets int) []OffsetHit {
-	mask := hashBitMask(NumAlignBits)
+func AlignFingerprints(master *Fingerprint, query *Fingerprint, numBits int, limit int) []OffsetHit {
+	mask := hashBitMask(numBits)
 
 	type HashOffset struct {
 		Hash   uint32
@@ -260,8 +313,8 @@ func alignFingerprints(master *Fingerprint, query *Fingerprint, maxOffsets int) 
 	}
 	sort.Slice(masterHashes, func(i, j int) bool { return masterHashes[i].Hash < masterHashes[j].Hash })
 
-	offsets := make(map[int]int)
-	maxOffsetCount := 0
+	numCounts := len(masterHashes) + len(queryHashes) + 1
+	counts := make([]float64, numCounts)
 	i := 0
 	for _, mo := range masterHashes {
 		for i < len(queryHashes) && queryHashes[i].Hash < mo.Hash {
@@ -271,34 +324,121 @@ func alignFingerprints(master *Fingerprint, query *Fingerprint, maxOffsets int) 
 			break
 		}
 		for j := i; j < len(queryHashes) && queryHashes[j].Hash == mo.Hash; j++ {
-			offset := mo.Offset - queryHashes[j].Offset
-			offsets[offset]++
-			if offsets[offset] > maxOffsetCount {
-				maxOffsetCount = offsets[offset]
-			}
+			offset := mo.Offset - queryHashes[j].Offset + len(queryHashes)
+			counts[offset] += 1
 		}
 	}
 
-	// TODO gaussian filter
+	smoothedCounts := make([]float64, numCounts)
+	signal.GaussianFilter(counts, smoothedCounts, 3, 1.3, signal.Border{Type: signal.BorderReflect})
 
-	countThreshold := maxOffsetCount / MaxOffsetThresholdDiv
+	var topCount float64
+	for _, c := range smoothedCounts {
+		if c > topCount {
+			topCount = c
+		}
+	}
+
+	countThreshold := topCount / MaxOffsetThresholdDiv
 	if countThreshold < 2 {
 		countThreshold = 2
 	}
 
 	offsetHits := make([]OffsetHit, 0)
-	for offset, count := range offsets {
+	for offset, count := range smoothedCounts {
 		if count >= countThreshold {
-			if offsets[offset-1] <= count && offsets[offset+1] < count {
-				offsetHits = append(offsetHits, OffsetHit{offset, count})
+			var previousCount, nextCount float64
+			if offset > 0 {
+				previousCount = smoothedCounts[offset-1]
+			}
+			if offset < len(smoothedCounts)-1 {
+				nextCount = smoothedCounts[offset+1]
+			}
+			if previousCount <= count && nextCount < count {
+				offsetHits = append(offsetHits, OffsetHit{offset - len(queryHashes), count})
 			}
 		}
 	}
 	sort.Slice(offsetHits, func(i, j int) bool { return offsetHits[i].Count >= offsetHits[j].Count })
-	if len(offsetHits) > maxOffsets {
-		offsetHits = offsetHits[:maxOffsets]
+	if len(offsetHits) > limit {
+		offsetHits = offsetHits[:limit]
 	}
-	//log.Println("offsetHits", offsetHits)
 
 	return offsetHits
+}
+
+func countUniqueHashes(hashes []uint32, numBits int) int {
+	mask := hashBitMask(numBits)
+	maskedHashes := make([]uint32, len(hashes))
+	for i, hash := range hashes {
+		maskedHashes[i] = hash & mask
+	}
+	sort.Slice(maskedHashes, func(i, j int) bool { return maskedHashes[i] < maskedHashes[j] })
+	var uniqueCount int
+	for _, hash := range maskedHashes {
+		if uniqueCount == 0 || hash != maskedHashes[uniqueCount-1] {
+			maskedHashes[uniqueCount] = hash
+			uniqueCount++
+		}
+	}
+	return uniqueCount
+}
+
+// This is supposed to calculate a scope similar to https://github.com/acoustid/pg_acoustid/blob/main/acoustid_compare.c#L122
+func CompareAlignedFingerprints(a *Fingerprint, b *Fingerprint, offset OffsetHit) (float64, error) {
+	ahashes := a.Hashes
+	bhashes := b.Hashes
+
+	asize := len(ahashes)
+	bsize := len(bhashes)
+
+	minSize := asize
+	if bsize < minSize {
+		minSize = bsize
+	}
+	if minSize == 0 {
+		return 0.0, nil
+	}
+
+	if offset.Offset < 0 {
+		bhashes = bhashes[-offset.Offset:]
+		bsize = len(bhashes)
+	} else {
+		ahashes = ahashes[offset.Offset:]
+		asize = len(ahashes)
+	}
+
+	size := asize
+	if bsize < size {
+		size = bsize
+	}
+	if size == 0 {
+		return 0.0, nil
+	}
+
+	auniq := countUniqueHashes(ahashes, NumUniqBits)
+	buniq := countUniqueHashes(bhashes, NumUniqBits)
+
+	if offset.Count < float64(max(auniq, buniq))*0.02 {
+		return 0.0, nil
+	}
+
+	diversity := min(
+		min(1.0, float64(auniq+10)/float64(asize)+0.5),
+		min(1.0, float64(buniq+10)/float64(bsize)+0.5))
+
+	var bitError uint64
+	for i := 0; i < size; i++ {
+		bitError += uint64(util.PopCount32(ahashes[i] ^ bhashes[i]))
+	}
+
+	score := (float64(size) * 2.0 / float64(minSize)) * (1.0 - 2.0*float64(bitError)/float64(size*32))
+	if score < 0.0 {
+		score = 0.0
+	}
+	if diversity < 1.0 {
+		score = math.Pow(score, 8.0-7.0*diversity)
+	}
+
+	return score, nil
 }

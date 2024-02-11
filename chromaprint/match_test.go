@@ -4,7 +4,7 @@
 package chromaprint
 
 import (
-	"io/ioutil"
+	"os"
 	"path"
 	"testing"
 	"time"
@@ -14,7 +14,7 @@ import (
 )
 
 func loadTestFingerprint(t *testing.T, name string) *Fingerprint {
-	data, err := ioutil.ReadFile(path.Join("..", "testdata", name+".txt"))
+	data, err := os.ReadFile(path.Join("..", "testdata", name+".txt"))
 	require.NoError(t, err)
 	fp, err := ParseFingerprintString(string(data))
 	require.NoError(t, err)

@@ -4,6 +4,7 @@ package fpstore;
 option go_package = "github.com/acoustid/go-acoustid/proto/fpstore;fpstore";
 
 message Fingerprint {
+  int32 version = 2;
   repeated uint32 hashes = 1;
 }
 
