@@ -70,10 +70,10 @@ func PrepareAndRunUpdater(c *cli.Context) error {
 	cfg.Index.Host = c.String("index-host")
 	cfg.Index.Port = c.Int("index-port")
 
-	cfg.Database.Name = c.String("database-name")
+	cfg.Database.Database = c.String("database-name")
 	cfg.Database.Host = c.String("database-host")
 	cfg.Database.Port = c.Int("database-port")
-	cfg.Database.Username = c.String("database-username")
+	cfg.Database.User = c.String("database-username")
 	cfg.Database.Password = c.String("database-password")
 
 	RunUpdater(cfg)

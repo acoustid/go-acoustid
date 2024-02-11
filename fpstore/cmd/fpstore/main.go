@@ -7,6 +7,7 @@ import (
 	_ "github.com/lib/pq"
 	"github.com/pkg/errors"
 
+	"github.com/acoustid/go-acoustid/common"
 	"github.com/acoustid/go-acoustid/fpstore"
 	"github.com/redis/go-redis/v9"
 	log "github.com/sirupsen/logrus"
@@ -17,6 +18,41 @@ var DebugFlag = cli.BoolFlag{
 	Name:   "debug, d",
 	Usage:  "enable debug mode",
 	EnvVar: "FPSTORE_DEBUG",
+}
+
+var PostgresHost = cli.StringFlag{
+	Name:   "postgres-host",
+	Usage:  "Postgres server address",
+	Value:  "localhost",
+	EnvVar: "FPSTORE_POSTGRES_HOST",
+}
+
+var PostgresPort = cli.IntFlag{
+	Name:   "postgres-port",
+	Usage:  "Postgres server port",
+	Value:  5432,
+	EnvVar: "FPSTORE_POSTGRES_PORT",
+}
+
+var PostgresUser = cli.StringFlag{
+	Name:   "postgres-user",
+	Usage:  "Postgres server user",
+	Value:  "acoustid",
+	EnvVar: "FPSTORE_POSTGRES_USER",
+}
+
+var PostgresPassword = cli.StringFlag{
+	Name:   "postgres-password",
+	Usage:  "Postgres server password",
+	Value:  "",
+	EnvVar: "FPSTORE_POSTGRES_PASSWORD",
+}
+
+var PostgresDatabase = cli.StringFlag{
+	Name:   "postgres-database",
+	Usage:  "Postgres server database",
+	Value:  "acoustid",
+	EnvVar: "FPSTORE_POSTGRES_DATABASE",
 }
 
 var RedisAddrFlag = cli.StringFlag{
@@ -55,8 +91,14 @@ func PrepareFingerprintCache(c *cli.Context) (fpstore.FingerprintCache, error) {
 }
 
 func PrepareFingerprintStore(c *cli.Context) (fpstore.FingerprintStore, error) {
-	connStr := ""
-	db, err := sql.Open("postgres", connStr)
+	var config common.DatabaseConfig
+	config.Host = c.String(PostgresHost.Name)
+	config.Port = c.Int(PostgresPort.Name)
+	config.User = c.String(PostgresUser.Name)
+	config.Password = c.String(PostgresPassword.Name)
+	config.Database = c.String(PostgresDatabase.Name)
+
+	db, err := sql.Open("postgres", config.URL().String())
 	if err != nil {
 		return nil, err
 	}
