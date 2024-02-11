@@ -25,7 +25,7 @@ func ExtractLegacyQuery(fp *pb.Fingerprint) []uint32 {
 	const QuerySize = 120
 	const QueryStart = 80
 
-	const NumQueryBits = 26
+	const NumQueryBits = 28
 	const QueryBitMask = ((1 << NumQueryBits) - 1) << (32 - NumQueryBits)
 
 	const SilenceHash = 627964279
@@ -65,7 +65,7 @@ func ExtractLegacyQuery(fp *pb.Fingerprint) []uint32 {
 
 func filterIndexSearchResults(results []*index_pb.Result, limit int) []*index_pb.Result {
 	sort.Slice(results, func(i, j int) bool {
-		return results[i].Hits >= results[j].Hits && results[i].Id < results[j].Id
+		return results[i].Hits > results[j].Hits || (results[i].Hits == results[j].Hits && results[i].Id < results[j].Id)
 	})
 	if limit == 0 || len(results) > limit {
 		threshold := (results[0].Hits*10 + 50) / 100
