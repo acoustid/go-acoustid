@@ -8,7 +8,7 @@ import (
 
 	"github.com/rs/zerolog/log"
 
-	"github.com/acoustid/go-acoustid/chromaprint"
+	"github.com/acoustid/go-acoustid/pkg/chromaprint"
 	pb "github.com/acoustid/go-acoustid/proto/fpstore"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
