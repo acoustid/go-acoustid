@@ -1,4 +1,4 @@
 ARG VERSION=master
-FROM quay.io/acoustid/acoustid-index:$VERSION
+FROM quay.io/acoustid/acoustid-server:$VERSION
 
-CMD ["/aindex", "updater"]
+CMD ["/aserver", "fpindex", "updater"]

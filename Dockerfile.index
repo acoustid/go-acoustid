@@ -1,5 +1,4 @@
-FROM scratch
+ARG VERSION=master
+FROM quay.io/acoustid/acoustid-server:$VERSION
 
-COPY dist/aindex-linux-amd64 /aindex
-
-CMD ["/aindex"]
+CMD ["/aserver", "fpindex", "server"]
