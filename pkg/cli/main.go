@@ -4,7 +4,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/acoustid/go-acoustid/fpstore"
+	"github.com/acoustid/go-acoustid/pkg/fpstore"
 	"github.com/urfave/cli/v2"
 )
 
