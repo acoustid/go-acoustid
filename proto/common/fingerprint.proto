@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+package common;
+option go_package = "github.com/acoustid/go-acoustid/proto/common;common";
+
+message Fingerprint {
+    int32 version = 2;
+    repeated uint32 hashes = 1;
+}

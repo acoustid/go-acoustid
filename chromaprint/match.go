@@ -8,10 +8,12 @@ import (
 	"sort"
 	"time"
 
+	common_pb "github.com/acoustid/go-acoustid/proto/common"
 	"github.com/acoustid/go-acoustid/util"
 	"github.com/acoustid/go-acoustid/util/signal"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
+	"google.golang.org/protobuf/proto"
 )
 
 const NumQueryBits = 26
@@ -30,13 +32,14 @@ func hashBitMask(nbits int) uint32 {
 	return mask
 }
 
-func ExtractQuery(fp *Fingerprint, numBits int) *Fingerprint {
+func ExtractQuery(fp *common_pb.Fingerprint, numBits int) *common_pb.Fingerprint {
 	mask := hashBitMask(numBits)
-	query := *fp
+	query := &common_pb.Fingerprint{}
+	proto.Merge(query, fp)
 	for i, hash := range query.Hashes {
 		query.Hashes[i] = hash & mask
 	}
-	return &query
+	return query
 }
 
 type FingerprintConfig struct {
@@ -152,11 +155,11 @@ func NewFingerprintMatcher() *FingerprintMatcher {
 	}
 }
 
-func (fm *FingerprintMatcher) Compare(master *Fingerprint, query *Fingerprint) (float64, error) {
+func (fm *FingerprintMatcher) Compare(master *common_pb.Fingerprint, query *common_pb.Fingerprint) (float64, error) {
 	if master.Version != query.Version {
 		return 0, ErrInvalidFingerprintVersion
 	}
-	_, exists := FingerprintConfigs[master.Version]
+	_, exists := FingerprintConfigs[int(master.Version)]
 	if !exists {
 		return 0, ErrInvalidFingerprintVersion
 	}
@@ -181,11 +184,11 @@ func (fm *FingerprintMatcher) Compare(master *Fingerprint, query *Fingerprint) (
 	return score, nil
 }
 
-func (fm *FingerprintMatcher) Match(master *Fingerprint, query *Fingerprint) (*MatchResult, error) {
+func (fm *FingerprintMatcher) Match(master *common_pb.Fingerprint, query *common_pb.Fingerprint) (*MatchResult, error) {
 	if master.Version != query.Version {
 		return nil, ErrInvalidFingerprintVersion
 	}
-	config, exists := FingerprintConfigs[master.Version]
+	config, exists := FingerprintConfigs[int(master.Version)]
 	if !exists {
 		return nil, ErrInvalidFingerprintVersion
 	}
@@ -198,7 +201,7 @@ func (fm *FingerprintMatcher) Match(master *Fingerprint, query *Fingerprint) (*M
 	}
 
 	result := &MatchResult{
-		Version:      master.Version,
+		Version:      int(master.Version),
 		Config:       config,
 		MasterLength: len(master.Hashes),
 		QueryLength:  len(query.Hashes),
@@ -219,17 +222,17 @@ func (fm *FingerprintMatcher) Match(master *Fingerprint, query *Fingerprint) (*M
 	return result, nil
 }
 
-func CompareFingerprints(master *Fingerprint, query *Fingerprint) (float64, error) {
+func CompareFingerprints(master *common_pb.Fingerprint, query *common_pb.Fingerprint) (float64, error) {
 	matcher := NewFingerprintMatcher()
 	return matcher.Compare(master, query)
 }
 
-func MatchFingerprints(master *Fingerprint, query *Fingerprint) (*MatchResult, error) {
+func MatchFingerprints(master *common_pb.Fingerprint, query *common_pb.Fingerprint) (*MatchResult, error) {
 	matcher := NewFingerprintMatcher()
 	return matcher.Match(master, query)
 }
 
-func matchAlignedFingerprints(master *Fingerprint, query *Fingerprint, offset int) ([]MatchingSection, error) {
+func matchAlignedFingerprints(master *common_pb.Fingerprint, query *common_pb.Fingerprint, offset int) ([]MatchingSection, error) {
 	masterHashes := master.Hashes
 	queryHashes := query.Hashes
 	if offset >= 0 {
@@ -293,7 +296,7 @@ type OffsetHit struct {
 	Count  float64
 }
 
-func AlignFingerprints(master *Fingerprint, query *Fingerprint, numBits int, limit int) []OffsetHit {
+func AlignFingerprints(master *common_pb.Fingerprint, query *common_pb.Fingerprint, numBits int, limit int) []OffsetHit {
 	mask := hashBitMask(numBits)
 
 	type HashOffset struct {
@@ -386,7 +389,7 @@ func countUniqueHashes(hashes []uint32, numBits int) int {
 
 // This is supposed to calculate a single score similar to https://github.com/acoustid/pg_acoustid/blob/main/acoustid_compare.c#L122
 // It's only used for legacy reasons and will be replaced in the future
-func CompareAlignedFingerprints(a *Fingerprint, b *Fingerprint, offset OffsetHit) (float64, error) {
+func CompareAlignedFingerprints(a *common_pb.Fingerprint, b *common_pb.Fingerprint, offset OffsetHit) (float64, error) {
 	ahashes := a.Hashes
 	bhashes := b.Hashes
 

@@ -9,16 +9,17 @@ import (
 	"testing"
 	"time"
 
+	common_pb "github.com/acoustid/go-acoustid/proto/common"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func loadTestFingerprint(t *testing.T, name string) *Fingerprint {
+func loadTestFingerprint(t *testing.T, name string) *common_pb.Fingerprint {
 	data, err := os.ReadFile(path.Join("..", "testdata", name+".txt"))
 	require.NoError(t, err)
 	fp, err := ParseFingerprintString(string(data))
 	require.NoError(t, err)
-	return &fp
+	return fp
 }
 
 func TestMatchFingerprints_NoMatch(t *testing.T) {

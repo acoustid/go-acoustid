@@ -3,13 +3,10 @@ syntax = "proto3";
 package fpstore;
 option go_package = "github.com/acoustid/go-acoustid/proto/fpstore;fpstore";
 
-message Fingerprint {
-  int32 version = 2;
-  repeated uint32 hashes = 1;
-}
+import public "common/fingerprint.proto";
 
 message InsertFingerprintRequest {
-  Fingerprint Fingerprint = 1;
+  common.Fingerprint Fingerprint = 1;
 }
 
 message InsertFingerprintResponse {
@@ -18,7 +15,7 @@ message InsertFingerprintResponse {
 
 message UpdateFingerprintRequest {
   uint64 id = 1;
-  Fingerprint fingerprint = 2;
+  common.Fingerprint fingerprint = 2;
 }
 
 message UpdateFingerprintResponse {
@@ -36,11 +33,11 @@ message GetFingerprintRequest {
 }
 
 message GetFingerprintResponse {
-  Fingerprint fingerprint = 1;
+  common.Fingerprint fingerprint = 1;
 }
 
 message CompareFingerprintRequest {
-  Fingerprint fingerprint = 1;
+  common.Fingerprint fingerprint = 1;
   repeated uint64 ids = 2;
 }
 
@@ -54,7 +51,7 @@ message CompareFingerprintResponse {
 }
 
 message SearchFingerprintRequest {
-  Fingerprint fingerprint = 1;
+  common.Fingerprint fingerprint = 1;
   int32 limit = 2;
 }
 

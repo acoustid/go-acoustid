@@ -10,6 +10,7 @@ import (
 
 	"errors"
 
+	common_pb "github.com/acoustid/go-acoustid/proto/common"
 	"github.com/acoustid/go-acoustid/util"
 )
 
@@ -31,21 +32,21 @@ func EncodeFingerprintToString(data []byte) string {
 }
 
 // ParseFingerprint reads binary fingerprint data and returns a parsed Fingerprint structure.
-func ParseFingerprint(data []byte) (Fingerprint, error) {
-	var fp Fingerprint
+func ParseFingerprint(data []byte) (*common_pb.Fingerprint, error) {
+	var fp common_pb.Fingerprint
 	err := unpackFingerprint(data, &fp)
 	if err != nil {
-		return fp, fmt.Errorf("invalid fingerprint: %w", err)
+		return &fp, fmt.Errorf("invalid fingerprint: %w", err)
 	}
-	return fp, nil
+	return &fp, nil
 }
 
 // ParseFingerprintString reads base64-encoded fingerprint string and returns a parsed Fingerprint structure.
-func ParseFingerprintString(str string) (Fingerprint, error) {
+func ParseFingerprintString(str string) (*common_pb.Fingerprint, error) {
 	data, err := DecodeFingerprintString(str)
 	if err != nil {
-		var empty Fingerprint
-		return empty, fmt.Errorf("invalid fingerprint string: %w", err)
+		var empty common_pb.Fingerprint
+		return &empty, fmt.Errorf("invalid fingerprint string: %w", err)
 	}
 	return ParseFingerprint(data)
 }
@@ -64,7 +65,7 @@ func ValidateFingerprintString(str string) bool {
 	return ValidateFingerprint(data)
 }
 
-func unpackFingerprint(data []byte, fp *Fingerprint) error {
+func unpackFingerprint(data []byte, fp *common_pb.Fingerprint) error {
 	if len(data) < 4 {
 		return errors.New("data is less than 4 bytes")
 	}
@@ -72,7 +73,7 @@ func unpackFingerprint(data []byte, fp *Fingerprint) error {
 	header := binary.BigEndian.Uint32(data)
 	offset := 4
 
-	version := int((header >> 24) & 0xff)
+	version := int32((header >> 24) & 0xff)
 	totalValues := int(header & 0xffffff)
 
 	if totalValues == 0 {
@@ -136,7 +137,7 @@ func unpackFingerprint(data []byte, fp *Fingerprint) error {
 	return nil
 }
 
-func CompressFingerprint(fp Fingerprint) []byte {
+func CompressFingerprint(fp *common_pb.Fingerprint) []byte {
 	normalBits := make([]uint8, 0, len(fp.Hashes)*32)
 	exceptionBits := make([]uint8, 0, len(fp.Hashes))
 	var lastBit uint8

@@ -75,9 +75,7 @@ func (s *FingerprintStoreService) compareFingerprints(ctx context.Context, a, b 
 	if len(a.Hashes) == 0 || len(b.Hashes) == 0 {
 		return 0, nil
 	}
-	a2 := chromaprint.Fingerprint{Version: int(a.Version), Hashes: a.Hashes}
-	b2 := chromaprint.Fingerprint{Version: int(b.Version), Hashes: b.Hashes}
-	return chromaprint.CompareFingerprints(&a2, &b2)
+	return chromaprint.CompareFingerprints(a, b)
 }
 
 // Implement Get method

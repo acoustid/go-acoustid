@@ -1,15 +1,13 @@
 package chromaprint
 
-import "time"
+import (
+	"time"
 
-// Fingerprint contains raw fingerprint data.
-type Fingerprint struct {
-	Version int      // version of the algorithm that generated the fingerprint
-	Hashes  []uint32 // the fingerprint
-}
+	common_pb "github.com/acoustid/go-acoustid/proto/common"
+)
 
 // AudioFileFingerprint contains raw fingerprint data and duration of the audio file from which the fingerprint was taken.
 type AudioFileFingerprint struct {
-	Fingerprint
-	Duration time.Duration
+	Fingerprint *common_pb.Fingerprint
+	Duration    time.Duration
 }
