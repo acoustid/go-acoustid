@@ -4,7 +4,7 @@ import (
 	"context"
 	"sort"
 
-	"github.com/acoustid/go-acoustid/index"
+	"github.com/acoustid/go-acoustid/pkg/index"
 	pb "github.com/acoustid/go-acoustid/proto/fpstore"
 	index_pb "github.com/acoustid/go-acoustid/proto/index"
 )

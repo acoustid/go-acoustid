@@ -4,6 +4,7 @@ import (
 	"os"
 
 	"github.com/acoustid/go-acoustid/pkg/fpstore"
+	"github.com/acoustid/go-acoustid/pkg/index"
 	"github.com/mattn/go-isatty"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -39,6 +40,7 @@ func BuildApp() *cli.App {
 		Before: Setup,
 		Commands: []*cli.Command{
 			fpstore.BuildCli(),
+			index.BuildCli(),
 		},
 	}
 }

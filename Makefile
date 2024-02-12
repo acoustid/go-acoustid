@@ -2,7 +2,6 @@ all: build
 
 build:
 	go build ./...
-	go build -o aindex ./index/cmd/aindex
 	go build -o aserver ./cmd/aserver
 
 check:

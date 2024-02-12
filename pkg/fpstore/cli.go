@@ -7,7 +7,7 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/acoustid/go-acoustid/common"
-	"github.com/acoustid/go-acoustid/index"
+	"github.com/acoustid/go-acoustid/pkg/index"
 	"github.com/pkg/errors"
 	"github.com/redis/go-redis/v9"
 	"github.com/urfave/cli/v2"
@@ -157,7 +157,7 @@ func PrepareAndRunServer(c *cli.Context) error {
 	service := NewFingerprintStoreService(fingerprintStore, fingerprintIndex, fingerprintCache)
 
 	listenAddr := net.JoinHostPort(c.String(ListenHostFlag.Name), strconv.Itoa(c.Int(ListenPortFlag.Name)))
-	log.Info().Msgf("Running gRPC server on %s", listenAddr)
+	log.Info().Msgf("Running gRPC on %s", listenAddr)
 	return RunFingerprintStoreServer(listenAddr, service)
 }
 

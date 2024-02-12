@@ -8,7 +8,7 @@ import (
 
 	pb "github.com/acoustid/go-acoustid/proto/index"
 	log "github.com/sirupsen/logrus"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 	grpc "google.golang.org/grpc"
 )
 
@@ -90,38 +90,38 @@ func RunProxyCommand(c *cli.Context) error {
 	return nil
 }
 
-var ProxyCommand = cli.Command{
+var ProxyCommand = &cli.Command{
 	Name:  "proxy",
 	Usage: "Runs gRPC proxy",
 	Flags: []cli.Flag{
-		cli.DurationFlag{
-			Name:   "request-timeout",
-			Usage:  "request timeout",
-			EnvVar: "AINDEX_PROXY_REQUEST_TIMEOUT",
+		&cli.DurationFlag{
+			Name:    "request-timeout",
+			Usage:   "request timeout",
+			EnvVars: []string{"AINDEX_PROXY_REQUEST_TIMEOUT"},
 		},
-		cli.StringFlag{
-			Name:   "listen-addr",
-			Usage:  "listen address",
-			Value:  "localhost",
-			EnvVar: "AINDEX_PROXY_LISTEN_ADDR",
+		&cli.StringFlag{
+			Name:    "listen-addr",
+			Usage:   "listen address",
+			Value:   "localhost",
+			EnvVars: []string{"AINDEX_PROXY_LISTEN_ADDR"},
 		},
-		cli.IntFlag{
-			Name:   "listen-port",
-			Usage:  "listen port number",
-			Value:  6081,
-			EnvVar: "AINDEX_PROXY_LISTEN_PORT",
+		&cli.IntFlag{
+			Name:    "listen-port",
+			Usage:   "listen port number",
+			Value:   6081,
+			EnvVars: []string{"AINDEX_PROXY_LISTEN_PORT"},
 		},
-		cli.StringFlag{
-			Name:   "index-host",
-			Usage:  "index host",
-			Value:  "localhost",
-			EnvVar: "AINDEX_PROXY_INDEX_ADDR",
+		&cli.StringFlag{
+			Name:    "index-host",
+			Usage:   "index host",
+			Value:   "localhost",
+			EnvVars: []string{"AINDEX_PROXY_INDEX_ADDR"},
 		},
-		cli.IntFlag{
-			Name:   "index-port",
-			Usage:  "index port number",
-			Value:  6080,
-			EnvVar: "AINDEX_PROXY_INDEX_PORT",
+		&cli.IntFlag{
+			Name:    "index-port",
+			Usage:   "index port number",
+			Value:   6080,
+			EnvVars: []string{"AINDEX_PROXY_INDEX_PORT"},
 		},
 	},
 	Action: RunProxyCommand,
