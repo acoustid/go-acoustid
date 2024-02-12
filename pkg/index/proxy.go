@@ -7,7 +7,7 @@ import (
 	"time"
 
 	pb "github.com/acoustid/go-acoustid/proto/index"
-	log "github.com/sirupsen/logrus"
+	"github.com/rs/zerolog/log"
 	"github.com/urfave/cli/v2"
 	grpc "google.golang.org/grpc"
 )
@@ -51,12 +51,6 @@ func (p *Proxy) Insert(ctx context.Context, in *pb.InsertRequest) (*pb.InsertRes
 }
 
 func RunProxy(cfg *ProxyConfig) {
-	if cfg.Debug {
-		log.SetLevel(log.DebugLevel)
-	} else {
-		log.SetLevel(log.InfoLevel)
-	}
-
 	pool := NewIndexClientPool(cfg.Index, 32)
 	defer pool.Close(context.Background())
 
@@ -65,7 +59,8 @@ func RunProxy(cfg *ProxyConfig) {
 	addr := net.JoinHostPort(cfg.ListenHost, strconv.Itoa(cfg.ListenPort))
 	lis, err := net.Listen("tcp", addr)
 	if err != nil {
-		log.Fatalf("failed to listen: %v", err)
+		log.Fatal().Err(err).Msg("failed to listen")
+		return
 	}
 
 	grpcServer := grpc.NewServer()

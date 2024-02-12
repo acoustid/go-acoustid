@@ -12,7 +12,6 @@ import (
 	"github.com/acoustid/go-acoustid/util"
 	"github.com/acoustid/go-acoustid/util/signal"
 	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -286,7 +285,6 @@ func matchAlignedFingerprints(master *common_pb.Fingerprint, query *common_pb.Fi
 			matches = append(matches, m)
 		}
 	}
-	log.Println(matches)
 
 	return matches, nil
 }

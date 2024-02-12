@@ -7,7 +7,7 @@ import (
 	pb "github.com/acoustid/go-acoustid/proto/index"
 
 	pool "github.com/jolestar/go-commons-pool"
-	log "github.com/sirupsen/logrus"
+	"github.com/rs/zerolog/log"
 )
 
 type IndexClientFactory struct {
@@ -78,14 +78,14 @@ func (p *IndexClientPool) Close(ctx context.Context) {
 func (p *IndexClientPool) Search(ctx context.Context, in *pb.SearchRequest) (*pb.SearchResponse, error) {
 	obj, err := p.Pool.BorrowObject(ctx)
 	if err != nil {
-		log.Errorf("failed to borrow index client from the pool: %v", err)
+		log.Error().Err(err).Msg("failed to borrow index client from the pool")
 		return nil, err
 	}
 
 	defer func() {
 		err := p.Pool.ReturnObject(ctx, obj)
 		if err != nil {
-			log.Errorf("failed to return index client to the pool: %v", err)
+			log.Error().Err(err).Msg("failed to return index client from the pool")
 		}
 	}()
 
@@ -96,14 +96,14 @@ func (p *IndexClientPool) Search(ctx context.Context, in *pb.SearchRequest) (*pb
 func (p *IndexClientPool) Insert(ctx context.Context, in *pb.InsertRequest) (*pb.InsertResponse, error) {
 	obj, err := p.Pool.BorrowObject(ctx)
 	if err != nil {
-		log.Errorf("failed to borrow index client from the pool: %v", err)
+		log.Error().Err(err).Msg("failed to borrow index client from the pool")
 		return nil, err
 	}
 
 	defer func() {
 		err := p.Pool.ReturnObject(ctx, obj)
 		if err != nil {
-			log.Errorf("failed to return index client to the pool: %v", err)
+			log.Error().Err(err).Msg("failed to return index client from the pool")
 		}
 	}()
 
