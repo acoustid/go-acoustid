@@ -1,6 +1,7 @@
 syntax = "proto3";
 
 package index;
+option go_package = "github.com/acoustid/go-acoustid/proto/index;index";
 
 service Index {
   rpc Search(SearchRequest) returns (SearchResponse) {}

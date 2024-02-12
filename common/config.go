@@ -1,27 +1,30 @@
 package common
 
 import (
+	"database/sql"
 	"fmt"
 	"net"
 	"net/url"
 	"os"
 	"strconv"
+
+	_ "github.com/lib/pq"
 )
 
 type DatabaseConfig struct {
-	Name     string
+	Database string
 	Host     string
 	Port     int
-	Username string
+	User     string
 	Password string
 }
 
 func NewDatabaseConfig() *DatabaseConfig {
 	return &DatabaseConfig{
-		Name:     "acoustid",
+		Database: "acoustid",
 		Host:     "localhost",
 		Port:     5432,
-		Username: "acoustid",
+		User:     "acoustid",
 		Password: "acoustid",
 	}
 }
@@ -29,7 +32,7 @@ func NewDatabaseConfig() *DatabaseConfig {
 func NewTestDatabaseConfig(name string) *DatabaseConfig {
 	cfg := NewDatabaseConfig()
 	cfg.Port += 10000
-	cfg.Name = name
+	cfg.Database = name
 	cfg.readEnv("ACOUSTID_TEST_POSTGRESQL_")
 	return cfg
 }
@@ -37,19 +40,27 @@ func NewTestDatabaseConfig(name string) *DatabaseConfig {
 func (cfg *DatabaseConfig) URL() *url.URL {
 	var u url.URL
 	u.Scheme = "postgresql"
-	u.User = url.UserPassword(cfg.Username, cfg.Password)
+	if cfg.Password == "" {
+		u.User = url.User(cfg.User)
+	} else {
+		u.User = url.UserPassword(cfg.User, cfg.Password)
+	}
 	u.Host = net.JoinHostPort(cfg.Host, strconv.Itoa(cfg.Port))
-	u.Path = fmt.Sprintf("/%s", cfg.Name)
+	u.Path = fmt.Sprintf("/%s", cfg.Database)
 	params := url.Values{}
 	params.Add("sslmode", "disable")
 	u.RawQuery = params.Encode()
 	return &u
 }
 
+func (cfg *DatabaseConfig) Connect() (*sql.DB, error) {
+	return sql.Open("postgres", cfg.URL().String())
+}
+
 func (cfg *DatabaseConfig) readEnv(prefix string) {
 	name := os.Getenv(prefix + "NAME")
 	if name != "" {
-		cfg.Name = name
+		cfg.Database = name
 	}
 	host := os.Getenv(prefix + "HOST")
 	if host != "" {
@@ -64,7 +75,7 @@ func (cfg *DatabaseConfig) readEnv(prefix string) {
 	}
 	username := os.Getenv(prefix + "USERNAME")
 	if username != "" {
-		cfg.Username = username
+		cfg.User = username
 	}
 	password := os.Getenv(prefix + "PASSWORD")
 	if password != "" {

@@ -1,0 +1,71 @@
+syntax = "proto3";
+
+package fpstore;
+option go_package = "github.com/acoustid/go-acoustid/proto/fpstore;fpstore";
+
+import public "common/fingerprint.proto";
+
+message InsertFingerprintRequest {
+  common.Fingerprint Fingerprint = 1;
+}
+
+message InsertFingerprintResponse {
+  uint64 id = 1;
+}
+
+message UpdateFingerprintRequest {
+  uint64 id = 1;
+  common.Fingerprint fingerprint = 2;
+}
+
+message UpdateFingerprintResponse {
+}
+
+message DeleteFingerprintRequest {
+  uint64 id = 1;
+}
+
+message DeleteFingerprintResponse {
+}
+
+message GetFingerprintRequest {
+  uint64 id = 1;
+}
+
+message GetFingerprintResponse {
+  common.Fingerprint fingerprint = 1;
+}
+
+message CompareFingerprintRequest {
+  common.Fingerprint fingerprint = 1;
+  repeated uint64 ids = 2;
+}
+
+message MatchingFingerprint {
+  uint64 id = 1;
+  float similarity = 2;
+}
+
+message CompareFingerprintResponse {
+  repeated MatchingFingerprint results = 1;
+}
+
+message SearchFingerprintRequest {
+  common.Fingerprint fingerprint = 1;
+  int32 limit = 2;
+}
+
+message SearchFingerprintResponse {
+  repeated MatchingFingerprint results = 1;
+}
+
+service FingerprintStore {
+  rpc Insert(InsertFingerprintRequest) returns (InsertFingerprintResponse) {}
+  rpc Update(UpdateFingerprintRequest) returns (UpdateFingerprintResponse) {}
+  rpc Delete(DeleteFingerprintRequest) returns (DeleteFingerprintResponse) {}
+
+  rpc Get(GetFingerprintRequest) returns (GetFingerprintResponse) {}
+
+  rpc Search(SearchFingerprintRequest) returns (SearchFingerprintResponse) {}
+  rpc Compare(CompareFingerprintRequest) returns (CompareFingerprintResponse) {}
+}

@@ -1,6 +1,7 @@
 // Copyright (C) 2016  Lukas Lalinsky
 // Distributed under the MIT license, see the LICENSE file for details.
 
+//go:build ignore
 // +build ignore
 
 package main

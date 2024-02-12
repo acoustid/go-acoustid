@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/acoustid/go-acoustid/chromaprint"
+	"github.com/acoustid/go-acoustid/pkg/chromaprint"
 	"github.com/acoustid/go-acoustid/server/services"
 )
 

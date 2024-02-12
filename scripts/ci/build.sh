@@ -11,6 +11,5 @@ for target in $targets
 do
     os="$(echo $target | cut -d '/' -f1)"
     arch="$(echo $target | cut -d '/' -f2)"
-    GOOS=$os GOARCH=$arch CGO_ENABLED=0 go build -o dist/aserver-$os-$arch ./server/cmd/aserver
-    GOOS=$os GOARCH=$arch CGO_ENABLED=0 go build -o dist/aindex-$os-$arch ./index/cmd/aindex
+    GOOS=$os GOARCH=$arch CGO_ENABLED=0 go build -o dist/aserver-$os-$arch ./cmd/aserver
 done

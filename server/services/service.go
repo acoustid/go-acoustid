@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/acoustid/go-acoustid/chromaprint"
+	common_pb "github.com/acoustid/go-acoustid/proto/common"
 )
 
 type FingerprintSearchResult struct {
@@ -14,5 +14,5 @@ type FingerprintSearchResult struct {
 }
 
 type FingerprintSearcher interface {
-	Search(ctx context.Context, fingerprint chromaprint.Fingerprint, duration time.Duration) ([]FingerprintSearchResult, error)
+	Search(ctx context.Context, fingerprint *common_pb.Fingerprint, duration time.Duration) ([]FingerprintSearchResult, error)
 }

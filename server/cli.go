@@ -9,17 +9,17 @@ import (
 	"strconv"
 
 	"github.com/acoustid/go-acoustid/database/fingerprint_db"
-	"github.com/acoustid/go-acoustid/index"
+	index "github.com/acoustid/go-acoustid/pkg/fpindex"
 	"github.com/acoustid/go-acoustid/server/api"
 	"github.com/acoustid/go-acoustid/server/services/legacy"
 	_ "github.com/lib/pq"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 )
 
 var DebugFlag = cli.BoolFlag{
-	Name:   "debug, d",
-	Usage:  "enable debug mode",
-	EnvVar: "ACOUSTID_DEBUG",
+	Name:    "debug, d",
+	Usage:   "enable debug mode",
+	EnvVars: []string{"ACOUSTID_DEBUG"},
 }
 
 func RunApiCommand(c *cli.Context) error {
@@ -51,28 +51,28 @@ func RunApiCommand(c *cli.Context) error {
 	return api.ListenAndServe(c.String("listen"))
 }
 
-var ApiCommand = cli.Command{
+var ApiCommand = &cli.Command{
 	Name:   "api",
 	Usage:  "Runs API server",
 	Action: RunApiCommand,
 	Flags: []cli.Flag{
-		cli.StringFlag{
-			Name:   "listen, l",
-			Usage:  "listen address",
-			EnvVar: "ACOUSTID_API_LISTEN_ADDRESS",
-			Value:  "127.0.0.1:8080",
+		&cli.StringFlag{
+			Name:    "listen, l",
+			Usage:   "listen address",
+			EnvVars: []string{"ACOUSTID_API_LISTEN_ADDRESS"},
+			Value:   "127.0.0.1:8080",
 		},
-		cli.StringFlag{
-			Name:   "index-address",
-			Usage:  "index address",
-			EnvVar: "ACOUSTID_API_INDEX_ADDRESS",
-			Value:  "127.0.0.1:6080",
+		&cli.StringFlag{
+			Name:    "index-address",
+			Usage:   "index address",
+			EnvVars: []string{"ACOUSTID_API_INDEX_ADDRESS"},
+			Value:   "127.0.0.1:6080",
 		},
-		cli.StringFlag{
-			Name:   "fingerprint-db-url",
-			Usage:  "fingerprint database URL",
-			EnvVar: "ACOUSTID_API_FINGERPRINT_DB_URL",
-			Value:  "postgresql://127.0.0.1:5432/acoustid",
+		&cli.StringFlag{
+			Name:    "fingerprint-db-url",
+			Usage:   "fingerprint database URL",
+			EnvVars: []string{"ACOUSTID_API_FINGERPRINT_DB_URL"},
+			Value:   "postgresql://127.0.0.1:5432/acoustid",
 		},
 	},
 }
@@ -82,9 +82,9 @@ func CreateApp() *cli.App {
 	app.Name = "aserver"
 	app.Usage = "AcoustID server"
 	app.Flags = []cli.Flag{
-		DebugFlag,
+		&DebugFlag,
 	}
-	app.Commands = []cli.Command{
+	app.Commands = []*cli.Command{
 		ApiCommand,
 	}
 	return app

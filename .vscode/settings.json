@@ -1,0 +1,5 @@
+{
+    "protoc": {
+        "options": ["-I", "${workspaceRoot}/proto", "--go_out=${workspaceRoot}/proto", "--go_opt=paths=source_relative", "--go-grpc_out=${workspaceRoot}/proto", "--go-grpc_opt=paths=source_relative"],
+    }
+}

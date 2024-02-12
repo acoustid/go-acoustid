@@ -1,6 +1,11 @@
 version: "3"
 services:
 
+  index:
+    image: ghcr.io/acoustid/acoustid-index:v2022.02.03
+    ports:
+      - "127.0.0.1:16080:6080"
+
   redis:
     image: redis:alpine
     ports:

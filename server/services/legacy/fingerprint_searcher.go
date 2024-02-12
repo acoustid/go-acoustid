@@ -7,7 +7,8 @@ import (
 	"sort"
 	"time"
 
-	"github.com/acoustid/go-acoustid/chromaprint"
+	common_pb "github.com/acoustid/go-acoustid/proto/common"
+
 	"github.com/acoustid/go-acoustid/database/fingerprint_db"
 	"github.com/acoustid/go-acoustid/proto/index"
 	"github.com/acoustid/go-acoustid/server/services"
@@ -108,7 +109,7 @@ func (searcher *FingerprintSearcher) GetCandidates(ctx context.Context, hashes [
 	return candidates, nil
 }
 
-func (s *FingerprintSearcher) Search(ctx context.Context, fingerprint chromaprint.Fingerprint, duration time.Duration) ([]services.FingerprintSearchResult, error) {
+func (s *FingerprintSearcher) Search(ctx context.Context, fingerprint *common_pb.Fingerprint, duration time.Duration) ([]services.FingerprintSearchResult, error) {
 	log.Printf("Searching for fingerprint with %v hashess", len(fingerprint.Hashes))
 	candidates, err := s.GetCandidates(ctx, s.ExtractIndexQuery(fingerprint.Hashes))
 	if err != nil {
