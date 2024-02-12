@@ -3,8 +3,10 @@ package fpstore
 import (
 	"context"
 	"fmt"
-	"log"
+
 	"net"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/acoustid/go-acoustid/chromaprint"
 	pb "github.com/acoustid/go-acoustid/proto/fpstore"
@@ -20,8 +22,13 @@ type FingerprintStoreService struct {
 	cache FingerprintCache
 }
 
+func FingerprintStoreServiceInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
+	log.Info().Str("method", info.FullMethod).Msg("Handling request")
+	return handler(ctx, req)
+}
+
 func RunFingerprintStoreServer(listenAddr string, service pb.FingerprintStoreServer) error {
-	server := grpc.NewServer()
+	server := grpc.NewServer(grpc.UnaryInterceptor(FingerprintStoreServiceInterceptor))
 	pb.RegisterFingerprintStoreServer(server, service)
 	lis, err := net.Listen("tcp", listenAddr)
 	if err != nil {
