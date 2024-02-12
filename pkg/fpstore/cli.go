@@ -7,7 +7,7 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/acoustid/go-acoustid/common"
-	"github.com/acoustid/go-acoustid/pkg/index"
+	"github.com/acoustid/go-acoustid/pkg/fpindex"
 	"github.com/pkg/errors"
 	"github.com/redis/go-redis/v9"
 	"github.com/urfave/cli/v2"
@@ -129,12 +129,12 @@ func PrepareFingerprintStore(c *cli.Context) (FingerprintStore, error) {
 }
 
 func PrepareFingerprintIndex(c *cli.Context) (FingerprintIndex, error) {
-	config := index.NewIndexConfig()
+	config := fpindex.NewIndexConfig()
 	config.Host = c.String(IndexHostFlag.Name)
 	config.Port = c.Int(IndexPortFlag.Name)
 
 	const MaxConnections = 1000
-	clientPool := index.NewIndexClientPool(config, MaxConnections)
+	clientPool := fpindex.NewIndexClientPool(config, MaxConnections)
 	return NewFingerprintIndexClient(clientPool), nil
 }
 

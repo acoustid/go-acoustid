@@ -4,7 +4,7 @@ import (
 	"context"
 	"sort"
 
-	"github.com/acoustid/go-acoustid/pkg/index"
+	"github.com/acoustid/go-acoustid/pkg/fpindex"
 	pb "github.com/acoustid/go-acoustid/proto/fpstore"
 	index_pb "github.com/acoustid/go-acoustid/proto/index"
 )
@@ -14,10 +14,10 @@ type FingerprintIndex interface {
 }
 
 type FingerprintIndexClient struct {
-	clientPool *index.IndexClientPool
+	clientPool *fpindex.IndexClientPool
 }
 
-func NewFingerprintIndexClient(clientPool *index.IndexClientPool) *FingerprintIndexClient {
+func NewFingerprintIndexClient(clientPool *fpindex.IndexClientPool) *FingerprintIndexClient {
 	return &FingerprintIndexClient{clientPool: clientPool}
 }
 

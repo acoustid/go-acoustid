@@ -6,7 +6,7 @@ import (
 	"errors"
 
 	"github.com/acoustid/go-acoustid/database/fingerprint_db"
-	"github.com/acoustid/go-acoustid/pkg/index"
+	"github.com/acoustid/go-acoustid/pkg/fpindex"
 	pb "github.com/acoustid/go-acoustid/proto/fpstore"
 	"github.com/rs/zerolog/log"
 )
@@ -19,7 +19,7 @@ type FingerprintStore interface {
 
 type PostgresFingerprintStore struct {
 	db  *sql.DB
-	idx *index.IndexClientPool
+	idx *fpindex.IndexClientPool
 }
 
 func NewPostgresFingerprintStore(db *sql.DB) *PostgresFingerprintStore {

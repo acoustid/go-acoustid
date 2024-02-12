@@ -9,7 +9,7 @@ import (
 	"strconv"
 
 	"github.com/acoustid/go-acoustid/database/fingerprint_db"
-	"github.com/acoustid/go-acoustid/pkg/index"
+	index "github.com/acoustid/go-acoustid/pkg/fpindex"
 	"github.com/acoustid/go-acoustid/server/api"
 	"github.com/acoustid/go-acoustid/server/services/legacy"
 	_ "github.com/lib/pq"

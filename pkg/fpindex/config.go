@@ -1,4 +1,4 @@
-package index
+package fpindex
 
 type IndexConfig struct {
 	Host string

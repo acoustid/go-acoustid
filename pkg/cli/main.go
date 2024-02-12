@@ -3,24 +3,45 @@ package cli
 import (
 	"os"
 
+	"github.com/acoustid/go-acoustid/pkg/fpindex"
 	"github.com/acoustid/go-acoustid/pkg/fpstore"
-	"github.com/acoustid/go-acoustid/pkg/index"
 	"github.com/mattn/go-isatty"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/urfave/cli/v2"
 )
 
-var DebugFlag = cli.BoolFlag{
-	Name:    "debug, d",
-	Usage:   "enable debug mode",
-	EnvVars: []string{"ASERVER_DEBUG"},
+var verboseFlag = &cli.BoolFlag{
+	Name:    "verbose",
+	Aliases: []string{"v"},
+	Usage:   "enable verbose mode",
+	EnvVars: []string{"ASERVER_VERBOSE"},
+}
+
+var logLevelFlag = &cli.StringFlag{
+	Name:    "log-level",
+	Usage:   "logging level",
+	EnvVars: []string{"ASERVER_LOG_LEVEL"},
 }
 
 func Setup(c *cli.Context) error {
-	zerolog.SetGlobalLevel(zerolog.InfoLevel)
-	if c.Bool(DebugFlag.Name) {
-		zerolog.SetGlobalLevel(zerolog.DebugLevel)
+	if c.IsSet(logLevelFlag.Name) {
+		logLevel, err := zerolog.ParseLevel(c.String(logLevelFlag.Name))
+		if err != nil {
+			return err
+		}
+		zerolog.SetGlobalLevel(logLevel)
+	} else {
+		switch verbosity := c.Count(verboseFlag.Name); verbosity {
+		case 0:
+			zerolog.SetGlobalLevel(zerolog.WarnLevel)
+		case 1:
+			zerolog.SetGlobalLevel(zerolog.InfoLevel)
+		case 2:
+			zerolog.SetGlobalLevel(zerolog.DebugLevel)
+		default:
+			zerolog.SetGlobalLevel(zerolog.TraceLevel)
+		}
 	}
 
 	if isatty.IsTerminal(os.Stdout.Fd()) {
@@ -35,12 +56,13 @@ func BuildApp() *cli.App {
 		Name:  "aserver",
 		Usage: "AcoustID server",
 		Flags: []cli.Flag{
-			&DebugFlag,
+			verboseFlag,
+			logLevelFlag,
 		},
 		Before: Setup,
 		Commands: []*cli.Command{
 			fpstore.BuildCli(),
-			index.BuildCli(),
+			fpindex.BuildCli(),
 		},
 	}
 }

@@ -1,4 +1,4 @@
-package index
+package fpindex
 
 import (
 	"github.com/urfave/cli/v2"
@@ -89,7 +89,7 @@ var UpdaterCommand = &cli.Command{
 func BuildCli() *cli.Command {
 	return &cli.Command{
 		Name:  "fpindex",
-		Usage: "AcoustID fingerprint index tools",
+		Usage: "AcoustID fingerprint index",
 		Subcommands: []*cli.Command{
 			UpdaterCommand,
 			ProxyCommand,
