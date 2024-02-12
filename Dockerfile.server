@@ -1,6 +1,5 @@
 FROM ubuntu:22.04
 
 COPY dist/aserver-linux-amd64 /aserver
-COPY dist/acoustid-fpstore-linux-amd64 /acoustid-fpstore
 
 CMD ["/aserver"]
