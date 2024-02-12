@@ -1,4 +1,0 @@
-ARG VERSION=master
-FROM quay.io/acoustid/acoustid-server:$VERSION
-
-CMD ["/aserver", "fpindex", "server"]
