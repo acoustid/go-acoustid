@@ -7,14 +7,14 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
 
+    - name: Check out code
+      uses: actions/checkout@v4
+
     - name: Set up Go
       uses: actions/setup-go@v5
       with:
         go-version: 1.22
       id: go
-
-    - name: Check out code
-      uses: actions/checkout@v4
 
     - name: Set up PostgreSQL databases
       uses: docker://quay.io/acoustid/postgresql:master
