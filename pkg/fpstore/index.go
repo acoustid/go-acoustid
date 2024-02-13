@@ -3,10 +3,12 @@ package fpstore
 import (
 	"context"
 	"sort"
+	"time"
 
 	"github.com/acoustid/go-acoustid/pkg/fpindex"
 	pb "github.com/acoustid/go-acoustid/proto/fpstore"
 	index_pb "github.com/acoustid/go-acoustid/proto/index"
+	"github.com/rs/zerolog/log"
 )
 
 type FingerprintIndex interface {
@@ -85,10 +87,13 @@ func filterIndexSearchResults(results []*index_pb.Result, limit int) []*index_pb
 
 func (c *FingerprintIndexClient) Search(ctx context.Context, fp *pb.Fingerprint, limit int) ([]uint64, error) {
 	req := &index_pb.SearchRequest{Hashes: ExtractLegacyQuery(fp)}
+	startTime := time.Now()
 	resp, err := c.clientPool.Search(ctx, req)
 	if err != nil {
+		log.Debug().Dur("duration", time.Since(startTime)).Err(err).Msg("index search request failed")
 		return nil, err
 	}
+	log.Debug().Dur("duration", time.Since(startTime)).Int("results", len(resp.Results)).Msg("index search request finished")
 
 	results := filterIndexSearchResults(resp.Results, limit)
 
