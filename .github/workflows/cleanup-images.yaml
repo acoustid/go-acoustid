@@ -1,0 +1,21 @@
+name: Cleanup images
+
+on:
+  schedule:
+    - cron: "0 0 * * *"  # every day at midnight
+  workflow_dispatch:
+
+jobs:
+  cleanup-untagged-images:
+    name: Cleanup untagged images
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete images
+        uses: snok/container-retention-policy@v2
+        with:
+          image-names: go-acoustid
+          cut-off: One month ago UTC
+          untagged-only: true
+          account-type: org
+          token: ${{ secrets.GITHUB_TOKEN }}
+          token-type: github-token
