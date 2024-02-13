@@ -3,6 +3,7 @@ package fpstore
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"net"
 
@@ -159,6 +160,10 @@ func (s *FingerprintStoreService) Search(ctx context.Context, req *pb.SearchFing
 		return nil, status.Error(codes.Internal, "failed to search index")
 	}
 
+	log.Debug().Int("candidates", len(candidateIds)).Msg("received candidates")
+
+	startTime := time.Now()
+
 	results, err := s.compareFingerprints(ctx, req.Fingerprint, candidateIds)
 	if err != nil {
 		return nil, err
@@ -166,5 +171,8 @@ func (s *FingerprintStoreService) Search(ctx context.Context, req *pb.SearchFing
 	if len(results) > maxResults {
 		results = results[:maxResults]
 	}
+
+	log.Debug().Dur("duration", time.Since(startTime)).Int("results", len(results)).Msg("search finished")
+
 	return &pb.SearchFingerprintResponse{Results: results}, nil
 }
