@@ -5,6 +5,7 @@ go 1.21
 require (
 	github.com/DATA-DOG/go-txdb v0.1.3
 	github.com/dchest/safefile v0.0.0-20151022103144-855e8d98f185
+	github.com/grpc-ecosystem/grpc-gateway/v2 v2.19.1
 	github.com/jolestar/go-commons-pool v2.0.0+incompatible
 	github.com/klauspost/compress v1.17.6
 	github.com/lib/pq v1.2.0
@@ -16,8 +17,10 @@ require (
 	github.com/stretchr/testify v1.8.3
 	github.com/urfave/cli/v2 v2.27.1
 	go4.org v0.0.0-20190919214946-0cfe6e5be80f
-	google.golang.org/grpc v1.56.3
-	google.golang.org/protobuf v1.30.0
+	google.golang.org/genproto/googleapis/api v0.0.0-20240125205218-1f4bbc51befe
+	google.golang.org/grpc v1.61.0
+	google.golang.org/grpc/cmd/protoc-gen-go-grpc v1.3.0
+	google.golang.org/protobuf v1.32.0
 )
 
 require (
@@ -35,11 +38,13 @@ require (
 	github.com/prometheus/client_model v0.2.0 // indirect
 	github.com/prometheus/common v0.26.0 // indirect
 	github.com/prometheus/procfs v0.6.0 // indirect
+	github.com/rogpeppe/go-internal v1.12.0 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 // indirect
-	golang.org/x/net v0.17.0 // indirect
+	golang.org/x/net v0.20.0 // indirect
 	golang.org/x/sys v0.17.0 // indirect
-	golang.org/x/text v0.13.0 // indirect
-	google.golang.org/genproto v0.0.0-20230410155749-daa745c078e1 // indirect
+	golang.org/x/text v0.14.0 // indirect
+	google.golang.org/genproto v0.0.0-20240116215550-a9fa1716bcac // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20240125205218-1f4bbc51befe // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

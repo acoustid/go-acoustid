@@ -5,6 +5,8 @@ option go_package = "github.com/acoustid/go-acoustid/proto/fpstore;fpstore";
 
 import public "common/fingerprint.proto";
 
+import "google/api/annotations.proto";
+
 message InsertFingerprintRequest {
   common.Fingerprint Fingerprint = 1;
 }
@@ -60,12 +62,43 @@ message SearchFingerprintResponse {
 }
 
 service FingerprintStore {
-  rpc Insert(InsertFingerprintRequest) returns (InsertFingerprintResponse) {}
-  rpc Update(UpdateFingerprintRequest) returns (UpdateFingerprintResponse) {}
-  rpc Delete(DeleteFingerprintRequest) returns (DeleteFingerprintResponse) {}
+  rpc Insert(InsertFingerprintRequest) returns (InsertFingerprintResponse) {
+    option (google.api.http) = {
+      post: "/v1/fingerprint"
+      body: "*"
+    };
+  }
 
-  rpc Get(GetFingerprintRequest) returns (GetFingerprintResponse) {}
+  rpc Update(UpdateFingerprintRequest) returns (UpdateFingerprintResponse) {
+    option (google.api.http) = {
+      put: "/v1/fingerprint/{id}"
+      body: "*"
+    };
+  }
 
-  rpc Search(SearchFingerprintRequest) returns (SearchFingerprintResponse) {}
-  rpc Compare(CompareFingerprintRequest) returns (CompareFingerprintResponse) {}
+  rpc Delete(DeleteFingerprintRequest) returns (DeleteFingerprintResponse) {
+    option (google.api.http) = {
+      delete: "/v1/fingerprint/{id}"
+    };
+  }
+
+  rpc Get(GetFingerprintRequest) returns (GetFingerprintResponse) {
+    option (google.api.http) = {
+      get: "/v1/fingerprint/{id}"
+    };
+  }
+
+  rpc Search(SearchFingerprintRequest) returns (SearchFingerprintResponse) {
+    option (google.api.http) = {
+      post: "/v1/fingerprint/_search"
+      body: "*"
+    };
+  }
+
+  rpc Compare(CompareFingerprintRequest) returns (CompareFingerprintResponse) {
+    option (google.api.http) = {
+      post: "/v1/fingerprint/_compare"
+      body: "*"
+    };
+  }
 }
