@@ -73,7 +73,7 @@ func (s *PostgresFingerprintStore) getV1(ctx context.Context, id uint64) (*pb.Fi
 		log.Warn().Err(err).Msg("failed to get fingerprint from v2 table")
 		return nil, err
 	}
-	return &pb.Fingerprint{Hashes: hashes}, nil
+	return &pb.Fingerprint{Version: 1, Hashes: hashes}, nil
 }
 
 func (s *PostgresFingerprintStore) getV2(ctx context.Context, id uint64) (*pb.Fingerprint, error) {
