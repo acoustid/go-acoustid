@@ -102,7 +102,6 @@ func (s *FingerprintStoreService) compareFingerprints(ctx context.Context, query
 	return results, nil
 }
 
-// Implement Get method
 func (s *FingerprintStoreService) Get(ctx context.Context, req *pb.GetFingerprintRequest) (*pb.GetFingerprintResponse, error) {
 	id := req.Id
 	if id == 0 {
@@ -132,17 +131,40 @@ func (s *FingerprintStoreService) Compare(ctx context.Context, req *pb.CompareFi
 	return &pb.CompareFingerprintResponse{Results: results}, nil
 }
 
+const DefaultSearchLimit = 10
+const FastModeFactor = 1
+const SlowModeFactor = 4
+
 func (s *FingerprintStoreService) Search(ctx context.Context, req *pb.SearchFingerprintRequest) (*pb.SearchFingerprintResponse, error) {
 	if len(req.Fingerprint.Hashes) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "fingerprint can't be empty")
 	}
-	candidateIds, err := s.index.Search(ctx, req.Fingerprint, 10)
+
+	var maxResults int
+	if req.Limit > 0 {
+		maxResults = int(req.Limit)
+	} else {
+		maxResults = DefaultSearchLimit
+	}
+
+	var maxCandidateIds int
+	if req.FastMode {
+		maxCandidateIds = maxResults * FastModeFactor
+	} else {
+		maxCandidateIds = maxResults * SlowModeFactor
+	}
+
+	candidateIds, err := s.index.Search(ctx, req.Fingerprint, maxCandidateIds)
 	if err != nil {
 		return nil, status.Error(codes.Internal, "failed to search index")
 	}
+
 	results, err := s.compareFingerprints(ctx, req.Fingerprint, candidateIds)
 	if err != nil {
 		return nil, err
+	}
+	if len(results) > maxResults {
+		results = results[:maxResults]
 	}
 	return &pb.SearchFingerprintResponse{Results: results}, nil
 }

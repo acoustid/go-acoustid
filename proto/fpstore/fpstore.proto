@@ -55,6 +55,7 @@ message CompareFingerprintResponse {
 message SearchFingerprintRequest {
   common.Fingerprint fingerprint = 1;
   int32 limit = 2;
+  bool fast_mode = 3;
 }
 
 message SearchFingerprintResponse {
