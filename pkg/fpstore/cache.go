@@ -8,6 +8,7 @@ import (
 	pb "github.com/acoustid/go-acoustid/proto/fpstore"
 	"github.com/pkg/errors"
 	"github.com/redis/go-redis/v9"
+	"github.com/rs/zerolog/log"
 )
 
 type FingerprintCache interface {
@@ -40,6 +41,7 @@ func (c *RedisFingerprintCache) Get(ctx context.Context, id uint64) (*pb.Fingerp
 		}
 		return nil, errors.WithMessage(err, "failed to get fingerprint from cache")
 	}
+	log.Debug().Uint64("id", id).Str("key", key).Msg("Got fingerprint from cache")
 	fp, err := DecodeFingerprint(value)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to unmarshal fingerprint data")
