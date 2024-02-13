@@ -34,7 +34,9 @@ func (c *RedisFingerprintCache) cacheKey(id uint64) string {
 
 func (c *RedisFingerprintCache) Get(ctx context.Context, id uint64) (*pb.Fingerprint, error) {
 	key := c.cacheKey(id)
+	getStartTime := time.Now()
 	value, err := c.cache.Get(ctx, key).Bytes()
+	log.Debug().Dur("get_duration", time.Since(getStartTime)).Uint64("id", id).Msg("got fingerprint from redis")
 	if err != nil {
 		if err == redis.Nil {
 			return nil, nil
