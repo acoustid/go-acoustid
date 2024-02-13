@@ -110,9 +110,11 @@ func PrepareFingerprintCache(c *cli.Context) (FingerprintCache, error) {
 	database := c.Int(RedisDatabaseFlag.Name)
 	log.Info().Msgf("Connecting to Redis at %s:%d using database %d", host, port, database)
 	return NewRedisFingerprintCache(&redis.Options{
-		Addr:     net.JoinHostPort(host, strconv.Itoa(port)),
-		Password: c.String(RedisPasswordFlag.Name),
-		DB:       database,
+		Addr:         net.JoinHostPort(host, strconv.Itoa(port)),
+		Password:     c.String(RedisPasswordFlag.Name),
+		DB:           database,
+		Protocol:     2,
+		MinIdleConns: 3,
 	}), nil
 }
 
