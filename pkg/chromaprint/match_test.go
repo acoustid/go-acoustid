@@ -38,7 +38,7 @@ func TestMatchFingerprints_PartialMatch(t *testing.T) {
 	result, err := MatchFingerprints(master, query)
 	if assert.NoError(t, err) {
 		assert.NotEmpty(t, result.Sections)
-		assert.Equal(t, "13.000046s", result.MatchingDuration().String())
+		assert.Equal(t, "12.50481s", result.MatchingDuration().String())
 	}
 }
 
@@ -95,6 +95,6 @@ func TestCompareFingerprints_PartialMatch(t *testing.T) {
 	query := loadTestFingerprint(t, "radio1_2_ad_and_calibre_sunshine")
 	score, err := CompareFingerprints(master, query)
 	if assert.NoError(t, err) {
-		assert.InDelta(t, 0.7, score, 0.1)
+		assert.InDelta(t, 0.45, score, 0.1)
 	}
 }

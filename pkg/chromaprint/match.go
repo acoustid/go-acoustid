@@ -144,13 +144,15 @@ var ErrInvalidFingerprintVersion = errors.New("invalid fingerprint version")
 type FingerprintMatcher struct {
 	NumQueryBits        int
 	NumAlignBits        int
+	MaxOffset           int
 	MaxOffsetCandidates int
 }
 
 func NewFingerprintMatcher() *FingerprintMatcher {
 	return &FingerprintMatcher{
 		NumAlignBits:        14,
-		MaxOffsetCandidates: 3,
+		MaxOffset:           80,
+		MaxOffsetCandidates: 1,
 	}
 }
 
@@ -170,7 +172,7 @@ func (fm *FingerprintMatcher) Compare(master *common_pb.Fingerprint, query *comm
 		return 0, errors.New("query fingerprint too long")
 	}
 
-	offsetHits := AlignFingerprints(master, query, fm.NumAlignBits, 1)
+	offsetHits := AlignFingerprints(master, query, fm.NumAlignBits, fm.MaxOffsetCandidates, fm.MaxOffset)
 	if len(offsetHits) == 0 {
 		return 0, nil
 	}
@@ -206,7 +208,7 @@ func (fm *FingerprintMatcher) Match(master *common_pb.Fingerprint, query *common
 		QueryLength:  len(query.Hashes),
 	}
 
-	offsetHits := AlignFingerprints(master, query, fm.NumAlignBits, fm.MaxOffsetCandidates)
+	offsetHits := AlignFingerprints(master, query, fm.NumAlignBits, fm.MaxOffsetCandidates, fm.MaxOffset)
 	for _, hit := range offsetHits {
 		sections, err := matchAlignedFingerprints(master, query, hit.Offset)
 		if err != nil {
@@ -294,7 +296,7 @@ type OffsetHit struct {
 	Count  float64
 }
 
-func AlignFingerprints(master *common_pb.Fingerprint, query *common_pb.Fingerprint, numBits int, limit int) []OffsetHit {
+func AlignFingerprints(master *common_pb.Fingerprint, query *common_pb.Fingerprint, numBits int, limit int, maxOffset int) []OffsetHit {
 	mask := hashBitMask(numBits)
 
 	type HashOffset struct {
@@ -325,8 +327,11 @@ func AlignFingerprints(master *common_pb.Fingerprint, query *common_pb.Fingerpri
 			break
 		}
 		for j := i; j < len(queryHashes) && queryHashes[j].Hash == mo.Hash; j++ {
-			offset := mo.Offset - queryHashes[j].Offset + len(queryHashes)
-			counts[offset] += 1
+			offset := mo.Offset - queryHashes[j].Offset
+			if maxOffset == 0 || (-maxOffset <= offset && offset <= maxOffset) {
+				offset += len(queryHashes)
+				counts[offset] += 1
+			}
 		}
 	}
 
