@@ -17,5 +17,6 @@ jobs:
           cut-off: One month ago UTC
           untagged-only: true
           account-type: org
+          org-name: acoustid
           token: ${{ secrets.GITHUB_TOKEN }}
           token-type: github-token
