@@ -90,14 +90,18 @@ func (s *FingerprintStoreService) compareFingerprints(ctx context.Context, query
 		if id == 0 {
 			return nil, status.Error(codes.InvalidArgument, "id is required")
 		}
+		getStartTime := time.Now()
 		fp, err := s.getFingerprint(ctx, id)
+		log.Debug().Dur("duration", time.Since(getStartTime)).Uint64("id", id).Msg("get fingerprint")
 		if err != nil {
 			return nil, status.Error(codes.Internal, fmt.Sprintf("failed to get fingerprint %d", id))
 		}
 		if fp == nil {
 			continue
 		}
+		compareStartTime := time.Now()
 		score, err := chromaprint.CompareFingerprints(query, fp)
+		log.Debug().Dur("duration", time.Since(compareStartTime)).Uint64("id", id).Float64("score", score).Msg("compare fingerprint")
 		results = append(results, &pb.MatchingFingerprint{Id: id, Similarity: float32(score)})
 	}
 	return results, nil
