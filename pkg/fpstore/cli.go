@@ -52,7 +52,7 @@ var RedisHostFlag = cli.StringFlag{
 	Name:    "redis-host",
 	Usage:   "Redis server address",
 	Value:   "localhost:6379",
-	EnvVars: []string{"FPSTORE_REDIS_ADDR"},
+	EnvVars: []string{"FPSTORE_REDIS_HOST"},
 }
 
 var RedisPortFlag = cli.IntFlag{
