@@ -105,10 +105,14 @@ var IndexPortFlag = cli.IntFlag{
 }
 
 func PrepareFingerprintCache(c *cli.Context) (FingerprintCache, error) {
+	host := c.String(RedisHostFlag.Name)
+	port := c.Int(RedisPortFlag.Name)
+	database := c.Int(RedisDatabaseFlag.Name)
+	log.Info().Msgf("Connecting to Redis at %s:%d using database %d", host, port, database)
 	return NewRedisFingerprintCache(&redis.Options{
-		Addr:     net.JoinHostPort(c.String(RedisHostFlag.Name), strconv.Itoa(c.Int(RedisPortFlag.Name))),
+		Addr:     net.JoinHostPort(host, strconv.Itoa(port)),
 		Password: c.String(RedisPasswordFlag.Name),
-		DB:       c.Int(RedisDatabaseFlag.Name),
+		DB:       database,
 	}), nil
 }
 

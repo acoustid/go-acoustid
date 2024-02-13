@@ -9,6 +9,7 @@ import (
 	"strconv"
 
 	_ "github.com/lib/pq"
+	"github.com/rs/zerolog/log"
 )
 
 type DatabaseConfig struct {
@@ -54,7 +55,9 @@ func (cfg *DatabaseConfig) URL() *url.URL {
 }
 
 func (cfg *DatabaseConfig) Connect() (*sql.DB, error) {
-	return sql.Open("postgres", cfg.URL().String())
+	url := cfg.URL().String()
+	log.Info().Msgf("Connecting to PostgreSQL at %s:%d using database %s", cfg.Host, cfg.Port, cfg.Database)
+	return sql.Open("postgres", url)
 }
 
 func (cfg *DatabaseConfig) readEnv(prefix string) {
