@@ -80,11 +80,26 @@ func (s *FingerprintStoreService) getFingerprint(ctx context.Context, id uint64)
 	return fp, nil
 }
 
-func (s *FingerprintStoreService) compareFingerprints(ctx context.Context, a, b *pb.Fingerprint) (float64, error) {
-	if len(a.Hashes) == 0 || len(b.Hashes) == 0 {
-		return 0, nil
+func (s *FingerprintStoreService) compareFingerprints(ctx context.Context, query *pb.Fingerprint, ids []uint64) ([]*pb.MatchingFingerprint, error) {
+	var results []*pb.MatchingFingerprint
+	for _, id := range ids {
+		if ctx.Err() == context.Canceled {
+			return nil, status.Error(codes.Canceled, "request canceled")
+		}
+		if id == 0 {
+			return nil, status.Error(codes.InvalidArgument, "id is required")
+		}
+		fp, err := s.getFingerprint(ctx, id)
+		if err != nil {
+			return nil, status.Error(codes.Internal, fmt.Sprintf("failed to get fingerprint %d", id))
+		}
+		if fp == nil {
+			continue
+		}
+		score, err := chromaprint.CompareFingerprints(query, fp)
+		results = append(results, &pb.MatchingFingerprint{Id: id, Similarity: float32(score)})
 	}
-	return chromaprint.CompareFingerprints(a, b)
+	return results, nil
 }
 
 // Implement Get method
@@ -104,23 +119,30 @@ func (s *FingerprintStoreService) Get(ctx context.Context, req *pb.GetFingerprin
 }
 
 func (s *FingerprintStoreService) Compare(ctx context.Context, req *pb.CompareFingerprintRequest) (*pb.CompareFingerprintResponse, error) {
-	var resp pb.CompareFingerprintResponse
-	for _, id := range req.Ids {
-		if ctx.Err() == context.Canceled {
-			return nil, status.Error(codes.Canceled, "request canceled")
-		}
-		if id == 0 {
-			return nil, status.Error(codes.InvalidArgument, "id is required")
-		}
-		fp, err := s.getFingerprint(ctx, id)
-		if err != nil {
-			return nil, status.Error(codes.Internal, fmt.Sprintf("failed to get fingerprint %d", id))
-		}
-		if fp == nil {
-			continue
-		}
-		score, err := s.compareFingerprints(ctx, req.Fingerprint, fp)
-		resp.Results = append(resp.Results, &pb.MatchingFingerprint{Id: id, Similarity: float32(score)})
+	if len(req.Fingerprint.Hashes) == 0 {
+		return nil, status.Error(codes.InvalidArgument, "fingerprint can't be empty")
 	}
-	return &resp, nil
+	if len(req.Ids) == 0 {
+		return nil, status.Error(codes.InvalidArgument, "ids can't be empty")
+	}
+	results, err := s.compareFingerprints(ctx, req.Fingerprint, req.Ids)
+	if err != nil {
+		return nil, err
+	}
+	return &pb.CompareFingerprintResponse{Results: results}, nil
+}
+
+func (s *FingerprintStoreService) Search(ctx context.Context, req *pb.SearchFingerprintRequest) (*pb.SearchFingerprintResponse, error) {
+	if len(req.Fingerprint.Hashes) == 0 {
+		return nil, status.Error(codes.InvalidArgument, "fingerprint can't be empty")
+	}
+	candidateIds, err := s.index.Search(ctx, req.Fingerprint, 10)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to search index")
+	}
+	results, err := s.compareFingerprints(ctx, req.Fingerprint, candidateIds)
+	if err != nil {
+		return nil, err
+	}
+	return &pb.SearchFingerprintResponse{Results: results}, nil
 }
