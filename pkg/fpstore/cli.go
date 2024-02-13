@@ -136,16 +136,10 @@ func ConnectToRedis(c *cli.Context) (redis.Cmdable, error) {
 }
 
 func PrepareFingerprintCache(c *cli.Context) (FingerprintCache, error) {
-	host := c.String(RedisHostFlag.Name)
-	port := c.Int(RedisPortFlag.Name)
-	database := c.Int(RedisDatabaseFlag.Name)
-	log.Info().Msgf("Connecting to Redis at %s:%d/%d", host, port, database)
-	client := redis.NewClient(&redis.Options{
-		Addr:         net.JoinHostPort(host, strconv.Itoa(port)),
-		DB:           database,
-		Protocol:     2,
-		MinIdleConns: 3,
-	})
+	client, err := ConnectToRedis(c)
+	if err != nil {
+		return nil, errors.WithMessage(err, "failed to connect to Redis")
+	}
 	return NewRedisFingerprintCache(client), nil
 }
 
