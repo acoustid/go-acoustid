@@ -15,6 +15,7 @@ type FingerprintStore interface {
 	Insert(ctx context.Context, fp *pb.Fingerprint) (uint64, error)
 	Delete(ctx context.Context, id uint64) error
 	Get(ctx context.Context, id uint64) (*pb.Fingerprint, error)
+	GetMulti(ctx context.Context, ids []uint64) (map[uint64]*pb.Fingerprint, error)
 }
 
 type PostgresFingerprintStore struct {
@@ -96,4 +97,18 @@ func (s *PostgresFingerprintStore) Get(ctx context.Context, id uint64) (*pb.Fing
 		return nil, err
 	}
 	return fp, nil
+}
+
+func (s *PostgresFingerprintStore) GetMulti(ctx context.Context, ids []uint64) (map[uint64]*pb.Fingerprint, error) {
+	fps := make(map[uint64]*pb.Fingerprint, len(ids))
+	for _, id := range ids {
+		fp, err := s.Get(ctx, id)
+		if err != nil {
+			return nil, err
+		}
+		if fp != nil {
+			fps[id] = fp
+		}
+	}
+	return fps, nil
 }

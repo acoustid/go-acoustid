@@ -76,35 +76,56 @@ func (s *FingerprintStoreService) getFingerprint(ctx context.Context, id uint64)
 		if fp == nil {
 			return nil, nil
 		}
-		log.Debug().Uint64("id", id).Msg("fingerprint found in database")
 		s.cache.Set(ctx, id, fp)
-	} else {
-		log.Debug().Uint64("id", id).Msg("fingerprint found in cache")
 	}
 	return fp, nil
 }
 
-func (s *FingerprintStoreService) compareFingerprints(ctx context.Context, query *pb.Fingerprint, ids []uint64) ([]*pb.MatchingFingerprint, error) {
-	var results []*pb.MatchingFingerprint
+func (s *FingerprintStoreService) getFingerprints(ctx context.Context, ids []uint64) (map[uint64]*pb.Fingerprint, error) {
+	cachedFingerprints, err := s.cache.GetMulti(ctx, ids)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to get fingerprints from cache")
+	}
+
+	missingIds := make([]uint64, 0, len(ids))
 	for _, id := range ids {
+		if _, ok := cachedFingerprints[id]; !ok {
+			missingIds = append(missingIds, id)
+		}
+	}
+
+	if len(missingIds) > 0 {
+		fps, err := s.store.GetMulti(ctx, missingIds)
+		if err != nil {
+			return nil, status.Error(codes.Internal, "failed to get fingerprints from store")
+		}
+		for id, fp := range fps {
+			cachedFingerprints[id] = fp
+			s.cache.Set(ctx, id, fp)
+		}
+	}
+
+	return cachedFingerprints, nil
+}
+
+func (s *FingerprintStoreService) compareFingerprints(ctx context.Context, query *pb.Fingerprint, ids []uint64) ([]*pb.MatchingFingerprint, error) {
+	fingerprints, err := s.getFingerprints(ctx, ids)
+	if err != nil {
+		return nil, err
+	}
+
+	var results []*pb.MatchingFingerprint
+	for id, fp := range fingerprints {
 		if ctx.Err() == context.Canceled {
 			return nil, status.Error(codes.Canceled, "request canceled")
-		}
-		if id == 0 {
-			return nil, status.Error(codes.InvalidArgument, "id is required")
-		}
-		getStartTime := time.Now()
-		fp, err := s.getFingerprint(ctx, id)
-		log.Debug().Dur("duration", time.Since(getStartTime)).Uint64("id", id).Msg("get fingerprint")
-		if err != nil {
-			return nil, status.Error(codes.Internal, fmt.Sprintf("failed to get fingerprint %d", id))
 		}
 		if fp == nil {
 			continue
 		}
-		compareStartTime := time.Now()
 		score, err := chromaprint.CompareFingerprints(query, fp)
-		log.Debug().Dur("duration", time.Since(compareStartTime)).Uint64("id", id).Float64("score", score).Msg("compare fingerprint")
+		if err != nil {
+			return nil, status.Error(codes.Internal, fmt.Sprintf("failed to compare fingerprints"))
+		}
 		results = append(results, &pb.MatchingFingerprint{Id: id, Similarity: float32(score)})
 	}
 	return results, nil
