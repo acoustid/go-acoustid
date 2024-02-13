@@ -76,7 +76,10 @@ func (s *FingerprintStoreService) getFingerprint(ctx context.Context, id uint64)
 		if fp == nil {
 			return nil, nil
 		}
+		log.Debug().Uint64("id", id).Msg("fingerprint found in database")
 		s.cache.Set(ctx, id, fp)
+	} else {
+		log.Debug().Uint64("id", id).Msg("fingerprint found in cache")
 	}
 	return fp, nil
 }
