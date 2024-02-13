@@ -192,6 +192,7 @@ func BuildCli() *cli.Command {
 		Usage: "AcoustID fingerprint store",
 		Subcommands: []*cli.Command{
 			serverCommand,
+			GatewayCommand,
 		},
 	}
 }
