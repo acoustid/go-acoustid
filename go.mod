@@ -5,6 +5,7 @@ go 1.21
 require (
 	github.com/DATA-DOG/go-txdb v0.1.3
 	github.com/dchest/safefile v0.0.0-20151022103144-855e8d98f185
+	github.com/go-redis/redis/v8 v8.11.5
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.19.1
 	github.com/jolestar/go-commons-pool v2.0.0+incompatible
 	github.com/klauspost/compress v1.17.6
@@ -12,7 +13,6 @@ require (
 	github.com/mattn/go-isatty v0.0.19
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.11.1
-	github.com/redis/go-redis/v9 v9.4.0
 	github.com/rs/zerolog v1.32.0
 	github.com/stretchr/testify v1.8.3
 	github.com/urfave/cli/v2 v2.27.1
