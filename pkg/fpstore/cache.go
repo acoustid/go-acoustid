@@ -17,13 +17,13 @@ type FingerprintCache interface {
 }
 
 type RedisFingerprintCache struct {
-	cache *redis.Client
+	cache redis.Cmdable
 	ttl   time.Duration
 }
 
-func NewRedisFingerprintCache(options *redis.Options) *RedisFingerprintCache {
+func NewRedisFingerprintCache(cache redis.Cmdable) *RedisFingerprintCache {
 	return &RedisFingerprintCache{
-		cache: redis.NewClient(options),
+		cache: cache,
 		ttl:   24 * time.Hour,
 	}
 }

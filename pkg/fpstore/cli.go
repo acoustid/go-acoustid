@@ -3,6 +3,7 @@ package fpstore
 import (
 	"net"
 	"strconv"
+	"strings"
 
 	"github.com/rs/zerolog/log"
 
@@ -104,18 +105,48 @@ var IndexPortFlag = cli.IntFlag{
 	EnvVars: []string{"FPSTORE_INDEX_PORT"},
 }
 
+func ConnectToRedis(c *cli.Context) (redis.Cmdable, error) {
+	host := c.String(RedisHostFlag.Name)
+	port := c.Int(RedisPortFlag.Name)
+	database := c.Int(RedisDatabaseFlag.Name)
+	password := RedisPasswordFlag.Get(c)
+
+	if strings.Contains(host, ",") {
+		hosts := strings.Split(host, ",")
+		addrs := make(map[string]string, len(hosts))
+		for _, h := range hosts {
+			addrs[h] = net.JoinHostPort(h, strconv.Itoa(port))
+		}
+		log.Info().Msgf("Connecting to Redis ring at %s:%d/%d", host, port, database)
+		client := redis.NewRing(&redis.RingOptions{
+			Addrs:    addrs,
+			DB:       database,
+			Password: password,
+		})
+		return client, nil
+	} else {
+		log.Info().Msgf("Connecting to Redis at %s:%d/%d", host, port, database)
+		client := redis.NewClient(&redis.Options{
+			Addr:     net.JoinHostPort(host, strconv.Itoa(port)),
+			DB:       database,
+			Password: password,
+		})
+		return client, nil
+	}
+}
+
 func PrepareFingerprintCache(c *cli.Context) (FingerprintCache, error) {
 	host := c.String(RedisHostFlag.Name)
 	port := c.Int(RedisPortFlag.Name)
 	database := c.Int(RedisDatabaseFlag.Name)
-	log.Info().Msgf("Connecting to Redis at %s:%d using database %d", host, port, database)
-	return NewRedisFingerprintCache(&redis.Options{
+	log.Info().Msgf("Connecting to Redis at %s:%d/%d", host, port, database)
+	client := redis.NewClient(&redis.Options{
 		Addr:         net.JoinHostPort(host, strconv.Itoa(port)),
-		Password:     c.String(RedisPasswordFlag.Name),
 		DB:           database,
 		Protocol:     2,
 		MinIdleConns: 3,
-	}), nil
+	})
+	return NewRedisFingerprintCache(client), nil
 }
 
 func PrepareFingerprintStore(c *cli.Context) (FingerprintStore, error) {
