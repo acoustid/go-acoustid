@@ -149,6 +149,7 @@ func (s *FingerprintStoreService) Search(ctx context.Context, req *pb.SearchFing
 	}
 
 	var maxCandidateIds int
+	req.FastMode = true
 	if req.FastMode {
 		maxCandidateIds = maxResults * FastModeFactor
 	} else {
