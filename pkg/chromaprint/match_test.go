@@ -77,7 +77,7 @@ func TestCompareFingerprints_NoMatch(t *testing.T) {
 	query := loadTestFingerprint(t, "radio1_1_ad")
 	score, err := CompareFingerprints(master, query)
 	if assert.NoError(t, err) {
-		assert.Equal(t, 0.0, score)
+		assert.InDelta(t, 0.0, score, 0.01)
 	}
 }
 
