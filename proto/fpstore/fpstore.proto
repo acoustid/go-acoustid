@@ -46,7 +46,7 @@ message CompareFingerprintRequest {
 
 message MatchingFingerprint {
   uint64 id = 1;
-  float similarity = 2;
+  float score = 2;
 }
 
 message CompareFingerprintResponse {
