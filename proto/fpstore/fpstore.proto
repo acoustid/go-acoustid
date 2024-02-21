@@ -41,6 +41,7 @@ message GetFingerprintResponse {
 message CompareFingerprintRequest {
   common.Fingerprint fingerprint = 1;
   repeated uint64 ids = 2;
+  float min_score = 3;
 }
 
 message MatchingFingerprint {
@@ -56,6 +57,7 @@ message SearchFingerprintRequest {
   common.Fingerprint fingerprint = 1;
   int32 limit = 2;
   bool fast_mode = 3;
+  float min_score = 4;
 }
 
 message SearchFingerprintResponse {

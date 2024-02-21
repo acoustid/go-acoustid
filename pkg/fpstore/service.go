@@ -108,7 +108,7 @@ func (s *FingerprintStoreService) getFingerprints(ctx context.Context, ids []uin
 	return cachedFingerprints, nil
 }
 
-func (s *FingerprintStoreService) compareFingerprints(ctx context.Context, query *pb.Fingerprint, ids []uint64) ([]*pb.MatchingFingerprint, error) {
+func (s *FingerprintStoreService) compareFingerprints(ctx context.Context, query *pb.Fingerprint, ids []uint64, minScore float32) ([]*pb.MatchingFingerprint, error) {
 	fingerprints, err := s.getFingerprints(ctx, ids)
 	if err != nil {
 		return nil, err
@@ -126,7 +126,9 @@ func (s *FingerprintStoreService) compareFingerprints(ctx context.Context, query
 		if err != nil {
 			return nil, status.Error(codes.Internal, fmt.Sprintf("failed to compare fingerprints"))
 		}
-		results = append(results, &pb.MatchingFingerprint{Id: id, Similarity: float32(score)})
+		if score >= minScore {
+			results = append(results, &pb.MatchingFingerprint{Id: id, Similarity: score})
+		}
 	}
 	return results, nil
 }
@@ -153,7 +155,7 @@ func (s *FingerprintStoreService) Compare(ctx context.Context, req *pb.CompareFi
 	if len(req.Ids) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "ids can't be empty")
 	}
-	results, err := s.compareFingerprints(ctx, req.Fingerprint, req.Ids)
+	results, err := s.compareFingerprints(ctx, req.Fingerprint, req.Ids, req.MinScore)
 	if err != nil {
 		return nil, err
 	}
@@ -193,7 +195,7 @@ func (s *FingerprintStoreService) Search(ctx context.Context, req *pb.SearchFing
 
 	startTime := time.Now()
 
-	results, err := s.compareFingerprints(ctx, req.Fingerprint, candidateIds)
+	results, err := s.compareFingerprints(ctx, req.Fingerprint, candidateIds, req.MinScore)
 	if err != nil {
 		return nil, err
 	}

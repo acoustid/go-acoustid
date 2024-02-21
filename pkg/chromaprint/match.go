@@ -156,7 +156,7 @@ func NewFingerprintMatcher() *FingerprintMatcher {
 	}
 }
 
-func (fm *FingerprintMatcher) Compare(master *common_pb.Fingerprint, query *common_pb.Fingerprint) (float64, error) {
+func (fm *FingerprintMatcher) Compare(master *common_pb.Fingerprint, query *common_pb.Fingerprint) (float32, error) {
 	if master.Version != query.Version {
 		return 0, ErrInvalidFingerprintVersion
 	}
@@ -182,7 +182,7 @@ func (fm *FingerprintMatcher) Compare(master *common_pb.Fingerprint, query *comm
 		return 0, errors.WithMessage(err, "comparing failed")
 	}
 
-	return score, nil
+	return float32(score), nil
 }
 
 func (fm *FingerprintMatcher) Match(master *common_pb.Fingerprint, query *common_pb.Fingerprint) (*MatchResult, error) {
@@ -223,7 +223,7 @@ func (fm *FingerprintMatcher) Match(master *common_pb.Fingerprint, query *common
 	return result, nil
 }
 
-func CompareFingerprints(master *common_pb.Fingerprint, query *common_pb.Fingerprint) (float64, error) {
+func CompareFingerprints(master *common_pb.Fingerprint, query *common_pb.Fingerprint) (float32, error) {
 	matcher := NewFingerprintMatcher()
 	return matcher.Compare(master, query)
 }
