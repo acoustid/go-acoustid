@@ -110,12 +110,14 @@ var MetricsListenHost = cli.StringFlag{
 	Name:  "metrics-listen-host",
 	Usage: "Metrics listen address",
 	Value: "localhost",
+	EnvVars: []string{"FPSTORE_METRICS_LISTEN_HOST"},
 }
 
 var MetricsListenPort = cli.IntFlag{
 	Name:  "metrics-listen-port",
 	Usage: "Metrics listen port",
 	Value: 14659,
+	EnvVars: []string{"FPSTORE_METRICS_LISTEN_PORT"},
 }
 
 func ConnectToRedis(c *cli.Context) (redis.Cmdable, error) {
