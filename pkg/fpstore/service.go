@@ -7,10 +7,10 @@ import (
 
 	"net"
 
-	"github.com/rs/zerolog/log"
-
 	"github.com/acoustid/go-acoustid/pkg/chromaprint"
 	pb "github.com/acoustid/go-acoustid/proto/fpstore"
+	grpclogging "github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
+	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/reflection"
@@ -25,13 +25,34 @@ type FingerprintStoreService struct {
 	metrics *FingerprintStoreMetrics
 }
 
-func FingerprintStoreServiceInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
-	log.Info().Str("method", info.FullMethod).Msg("Handling request")
-	return handler(ctx, req)
+func interceptorLogger() grpclogging.Logger {
+	return grpclogging.LoggerFunc(func(_ context.Context, lvl grpclogging.Level, msg string, fields ...any) {
+		switch lvl {
+		case grpclogging.LevelDebug:
+			log.Debug().Fields(fields).Msg(msg)
+		case grpclogging.LevelInfo:
+			log.Info().Fields(fields).Msg(msg)
+		case grpclogging.LevelWarn:
+			log.Warn().Fields(fields).Msg(msg)
+		case grpclogging.LevelError:
+			log.Error().Fields(fields).Msg(msg)
+		default:
+			panic(fmt.Sprintf("unknown level %v", lvl))
+		}
+	})
 }
 
-func RunFingerprintStoreServer(listenAddr string, service pb.FingerprintStoreServer) error {
-	server := grpc.NewServer(grpc.UnaryInterceptor(FingerprintStoreServiceInterceptor))
+func RunFingerprintStoreServer(listenAddr string, service *FingerprintStoreService) error {
+	server := grpc.NewServer(
+		grpc.ChainUnaryInterceptor(
+			service.metrics.GrpcMetrics.UnaryServerInterceptor(),
+			grpclogging.UnaryServerInterceptor(interceptorLogger()),
+		),
+		grpc.ChainStreamInterceptor(
+			service.metrics.GrpcMetrics.StreamServerInterceptor(),
+			grpclogging.StreamServerInterceptor(interceptorLogger()),
+		),
+	)
 	pb.RegisterFingerprintStoreServer(server, service)
 	reflection.Register(server)
 	lis, err := net.Listen("tcp", listenAddr)

@@ -53,7 +53,7 @@ var PostgresDatabase = cli.StringFlag{
 var RedisHostFlag = cli.StringFlag{
 	Name:    "redis-host",
 	Usage:   "Redis server address",
-	Value:   "localhost:6379",
+	Value:   "localhost",
 	EnvVars: []string{"FPSTORE_REDIS_HOST"},
 }
 
@@ -230,6 +230,8 @@ func BuildCli() *cli.Command {
 			&RedisDatabaseFlag,
 			&IndexHostFlag,
 			&IndexPortFlag,
+			&MetricsListenHost,
+			&MetricsListenPort,
 		},
 		Action: PrepareAndRunServer,
 	}
