@@ -3,6 +3,7 @@ package fpstore
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"net"
 
@@ -16,6 +17,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/health"
 	"google.golang.org/grpc/health/grpc_health_v1"
+	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/reflection"
 	"google.golang.org/grpc/status"
 )
@@ -59,6 +61,10 @@ func RunFingerprintStoreServer(listenAddr string, service *FingerprintStoreServi
 			service.metrics.GrpcMetrics.UnaryServerInterceptor(),
 			grpclogging.UnaryServerInterceptor(grpcInterceptorLogger()),
 		),
+		grpc.KeepaliveParams(keepalive.ServerParameters{
+			MaxConnectionAge:      5 * time.Minute,
+			MaxConnectionAgeGrace: 1 * time.Minute,
+		}),
 	)
 	pb.RegisterFingerprintStoreServer(server, service)
 	grpc_health_v1.RegisterHealthServer(server, health.NewServer())

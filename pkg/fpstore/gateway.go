@@ -63,7 +63,10 @@ func RunGateway(c *cli.Context) error {
 	// Register gRPC server endpoint
 	// Note: Make sure the gRPC server is running properly and accessible
 	mux := runtime.NewServeMux()
-	opts := []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
+	opts := []grpc.DialOption{
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithDefaultServiceConfig(`{"loadBalancingPolicy":"round_robin"}`),
+	}
 	endpoint := net.JoinHostPort(GatewayServerHostFlag.Get(c), strconv.Itoa(GatewayServerPortFlag.Get(c)))
 	err := gw.RegisterFingerprintStoreHandlerFromEndpoint(ctx, mux, endpoint, opts)
 	if err != nil {
