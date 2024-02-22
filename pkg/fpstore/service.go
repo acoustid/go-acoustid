@@ -111,6 +111,10 @@ func (s *FingerprintStoreService) getFingerprint(ctx context.Context, id uint64)
 func (s *FingerprintStoreService) getFingerprints(ctx context.Context, ids []uint64) (map[uint64]*pb.Fingerprint, error) {
 	logger := zerolog.Ctx(ctx)
 
+	if len(ids) == 0 {
+		return nil, nil
+	}
+
 	cachedFingerprints, err := s.cache.GetMulti(ctx, ids)
 	if err != nil {
 		logger.Err(err).Msg("failed to get fingerprints from cache")
@@ -232,6 +236,10 @@ func (s *FingerprintStoreService) Search(ctx context.Context, req *pb.SearchFing
 	}
 
 	logger.Debug().Int("candidates", len(candidateIds)).Msg("received candidates")
+
+	if len(candidateIds) == 0 {
+		return &pb.SearchFingerprintResponse{}, nil
+	}
 
 	results, err := s.compareFingerprints(ctx, req.Fingerprint, candidateIds, req.MinScore)
 	if err != nil {

@@ -100,6 +100,9 @@ func (s *PostgresFingerprintStore) Get(ctx context.Context, id uint64) (*pb.Fing
 }
 
 func (s *PostgresFingerprintStore) GetMulti(ctx context.Context, ids []uint64) (map[uint64]*pb.Fingerprint, error) {
+	if len(ids) == 0 {
+		return nil, nil
+	}
 	fps := make(map[uint64]*pb.Fingerprint, len(ids))
 	for _, id := range ids {
 		fp, err := s.Get(ctx, id)

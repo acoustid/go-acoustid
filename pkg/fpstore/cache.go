@@ -33,6 +33,10 @@ func (c *RedisFingerprintCache) cacheKey(id uint64) string {
 }
 
 func (c *RedisFingerprintCache) GetMulti(ctx context.Context, ids []uint64) (map[uint64]*pb.Fingerprint, error) {
+	if len(ids) == 0 {
+		return nil, nil
+	}
+
 	keys := make([]string, len(ids))
 	for i, id := range ids {
 		keys[i] = c.cacheKey(id)
