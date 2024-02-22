@@ -107,16 +107,16 @@ var IndexPortFlag = cli.IntFlag{
 }
 
 var MetricsListenHost = cli.StringFlag{
-	Name:  "metrics-listen-host",
-	Usage: "Metrics listen address",
-	Value: "localhost",
+	Name:    "metrics-listen-host",
+	Usage:   "Metrics listen address",
+	Value:   "localhost",
 	EnvVars: []string{"FPSTORE_METRICS_LISTEN_HOST"},
 }
 
 var MetricsListenPort = cli.IntFlag{
-	Name:  "metrics-listen-port",
-	Usage: "Metrics listen port",
-	Value: 14659,
+	Name:    "metrics-listen-port",
+	Usage:   "Metrics listen port",
+	Value:   14659,
 	EnvVars: []string{"FPSTORE_METRICS_LISTEN_PORT"},
 }
 

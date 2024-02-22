@@ -109,6 +109,7 @@ func (s *FingerprintStoreService) getFingerprint(ctx context.Context, id uint64)
 func (s *FingerprintStoreService) getFingerprints(ctx context.Context, ids []uint64) (map[uint64]*pb.Fingerprint, error) {
 	cachedFingerprints, err := s.cache.GetMulti(ctx, ids)
 	if err != nil {
+		log.Err(err).Msg("failed to get fingerprints from cache")
 		return nil, status.Error(codes.Internal, "failed to get fingerprints from cache")
 	}
 
@@ -125,7 +126,8 @@ func (s *FingerprintStoreService) getFingerprints(ctx context.Context, ids []uin
 	if len(missingIds) > 0 {
 		fps, err := s.store.GetMulti(ctx, missingIds)
 		if err != nil {
-			return nil, status.Error(codes.Internal, "failed to get fingerprints from store")
+			log.Err(err).Msg("failed to get fingerprints from database")
+			return nil, status.Error(codes.Internal, "failed to get fingerprints from database")
 		}
 		for id, fp := range fps {
 			cachedFingerprints[id] = fp
@@ -152,7 +154,8 @@ func (s *FingerprintStoreService) compareFingerprints(ctx context.Context, query
 		}
 		score, err := chromaprint.CompareFingerprints(query, fp)
 		if err != nil {
-			return nil, status.Error(codes.Internal, fmt.Sprintf("failed to compare fingerprints"))
+			log.Err(err).Msg("failed to compare fingerprints")
+			return nil, status.Error(codes.Internal, "failed to compare fingerprints")
 		}
 		if score >= minScore {
 			results = append(results, &pb.MatchingFingerprint{Id: id, Score: score})
@@ -216,6 +219,7 @@ func (s *FingerprintStoreService) Search(ctx context.Context, req *pb.SearchFing
 
 	candidateIds, err := s.index.Search(ctx, req.Fingerprint, maxCandidateIds)
 	if err != nil {
+		log.Err(err).Msg("failed to search index")
 		return nil, status.Error(codes.Internal, "failed to search index")
 	}
 
