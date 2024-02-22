@@ -19,9 +19,10 @@ import (
 
 type FingerprintStoreService struct {
 	pb.UnimplementedFingerprintStoreServer
-	store FingerprintStore
-	index FingerprintIndex
-	cache FingerprintCache
+	store   FingerprintStore
+	index   FingerprintIndex
+	cache   FingerprintCache
+	metrics *FingerprintStoreMetrics
 }
 
 func FingerprintStoreServiceInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
@@ -40,8 +41,8 @@ func RunFingerprintStoreServer(listenAddr string, service pb.FingerprintStoreSer
 	return server.Serve(lis)
 }
 
-func NewFingerprintStoreService(store FingerprintStore, index FingerprintIndex, cache FingerprintCache) *FingerprintStoreService {
-	return &FingerprintStoreService{store: store, index: index, cache: cache}
+func NewFingerprintStoreService(store FingerprintStore, index FingerprintIndex, cache FingerprintCache, metrics *FingerprintStoreMetrics) *FingerprintStoreService {
+	return &FingerprintStoreService{store: store, index: index, cache: cache, metrics: metrics}
 }
 
 // Implement Insert method
@@ -93,6 +94,9 @@ func (s *FingerprintStoreService) getFingerprints(ctx context.Context, ids []uin
 			missingIds = append(missingIds, id)
 		}
 	}
+
+	s.metrics.CacheHits.Add(float64(len(ids) - len(missingIds)))
+	s.metrics.CacheMisses.Add(float64(len(missingIds)))
 
 	if len(missingIds) > 0 {
 		fps, err := s.store.GetMulti(ctx, missingIds)

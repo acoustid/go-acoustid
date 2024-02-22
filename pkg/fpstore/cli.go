@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/zerolog/log"
 
 	"github.com/acoustid/go-acoustid/common"
@@ -105,6 +106,18 @@ var IndexPortFlag = cli.IntFlag{
 	EnvVars: []string{"FPSTORE_INDEX_PORT"},
 }
 
+var MetricsListenHost = cli.StringFlag{
+	Name:  "metrics-listen-host",
+	Usage: "Metrics listen address",
+	Value: "localhost",
+}
+
+var MetricsListenPort = cli.IntFlag{
+	Name:  "metrics-listen-port",
+	Usage: "Metrics listen port",
+	Value: 14659,
+}
+
 func ConnectToRedis(c *cli.Context) (redis.Cmdable, error) {
 	host := c.String(RedisHostFlag.Name)
 	port := c.Int(RedisPortFlag.Name)
@@ -185,7 +198,14 @@ func PrepareAndRunServer(c *cli.Context) error {
 		return errors.WithMessage(err, "failed to initialize fingerprint cache")
 	}
 
-	service := NewFingerprintStoreService(fingerprintStore, fingerprintIndex, fingerprintCache)
+	metricsRegistry := prometheus.NewRegistry()
+	metrics := NewFingerprintStoreMetrics(metricsRegistry)
+
+	service := NewFingerprintStoreService(fingerprintStore, fingerprintIndex, fingerprintCache, metrics)
+
+	metricsListenAdr := net.JoinHostPort(c.String(MetricsListenHost.Name), strconv.Itoa(c.Int(MetricsListenPort.Name)))
+	log.Info().Msgf("Running metrics on %s", metricsListenAdr)
+	go RunMetricsServer(metricsListenAdr, metricsRegistry)
 
 	listenAddr := net.JoinHostPort(c.String(ListenHostFlag.Name), strconv.Itoa(c.Int(ListenPortFlag.Name)))
 	log.Info().Msgf("Running gRPC on %s", listenAddr)
