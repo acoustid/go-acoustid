@@ -9,6 +9,7 @@ import (
 	"github.com/acoustid/go-acoustid/pkg/chromaprint"
 	pb "github.com/acoustid/go-acoustid/proto/fpstore"
 	grpclogging "github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -70,6 +71,9 @@ func NewFingerprintStoreService(store FingerprintStore, index FingerprintIndex, 
 
 // Implement Insert method
 func (s *FingerprintStoreService) Insert(ctx context.Context, req *pb.InsertFingerprintRequest) (*pb.InsertFingerprintResponse, error) {
+	logger := log.Logger.With().Str("component", "fpstore").Str("method", "Insert").Logger()
+	ctx = logger.WithContext(ctx)
+
 	fp := req.Fingerprint
 	if fp == nil {
 		return nil, status.Error(codes.InvalidArgument, "fingerprint is required")
@@ -87,28 +91,19 @@ func (s *FingerprintStoreService) Insert(ctx context.Context, req *pb.InsertFing
 }
 
 func (s *FingerprintStoreService) getFingerprint(ctx context.Context, id uint64) (*pb.Fingerprint, error) {
-	fp, err := s.cache.Get(ctx, id)
+	fps, err := s.getFingerprints(ctx, []uint64{id})
 	if err != nil {
-		log.Printf("failed to get fingerprint from cache: %v", err)
+		return nil, err
 	}
-	if fp == nil {
-		fp, err = s.store.Get(ctx, id)
-		if err != nil {
-			log.Printf("failed to get fingerprint from store: %v", err)
-			return nil, err
-		}
-		if fp == nil {
-			return nil, nil
-		}
-		s.cache.Set(ctx, id, fp)
-	}
-	return fp, nil
+	return fps[id], nil
 }
 
 func (s *FingerprintStoreService) getFingerprints(ctx context.Context, ids []uint64) (map[uint64]*pb.Fingerprint, error) {
+	logger := zerolog.Ctx(ctx)
+
 	cachedFingerprints, err := s.cache.GetMulti(ctx, ids)
 	if err != nil {
-		log.Err(err).Msg("failed to get fingerprints from cache")
+		logger.Err(err).Msg("failed to get fingerprints from cache")
 		return nil, status.Error(codes.Internal, "failed to get fingerprints from cache")
 	}
 
@@ -125,7 +120,7 @@ func (s *FingerprintStoreService) getFingerprints(ctx context.Context, ids []uin
 	if len(missingIds) > 0 {
 		fps, err := s.store.GetMulti(ctx, missingIds)
 		if err != nil {
-			log.Err(err).Msg("failed to get fingerprints from database")
+			logger.Err(err).Msg("failed to get fingerprints from database")
 			return nil, status.Error(codes.Internal, "failed to get fingerprints from database")
 		}
 		for id, fp := range fps {
@@ -138,6 +133,8 @@ func (s *FingerprintStoreService) getFingerprints(ctx context.Context, ids []uin
 }
 
 func (s *FingerprintStoreService) compareFingerprints(ctx context.Context, query *pb.Fingerprint, ids []uint64, minScore float32) ([]*pb.MatchingFingerprint, error) {
+	logger := zerolog.Ctx(ctx)
+
 	fingerprints, err := s.getFingerprints(ctx, ids)
 	if err != nil {
 		return nil, err
@@ -153,7 +150,7 @@ func (s *FingerprintStoreService) compareFingerprints(ctx context.Context, query
 		}
 		score, err := chromaprint.CompareFingerprints(query, fp)
 		if err != nil {
-			log.Err(err).Msg("failed to compare fingerprints")
+			logger.Err(err).Msg("failed to compare fingerprints")
 			return nil, status.Error(codes.Internal, "failed to compare fingerprints")
 		}
 		if score >= minScore {
@@ -164,6 +161,9 @@ func (s *FingerprintStoreService) compareFingerprints(ctx context.Context, query
 }
 
 func (s *FingerprintStoreService) Get(ctx context.Context, req *pb.GetFingerprintRequest) (*pb.GetFingerprintResponse, error) {
+	logger := log.Logger.With().Str("component", "fpstore").Str("method", "Get").Logger()
+	ctx = logger.WithContext(ctx)
+
 	id := req.Id
 	if id == 0 {
 		return nil, status.Error(codes.InvalidArgument, "id is required")
@@ -179,6 +179,9 @@ func (s *FingerprintStoreService) Get(ctx context.Context, req *pb.GetFingerprin
 }
 
 func (s *FingerprintStoreService) Compare(ctx context.Context, req *pb.CompareFingerprintRequest) (*pb.CompareFingerprintResponse, error) {
+	logger := log.Logger.With().Str("component", "fpstore").Str("method", "Compare").Logger()
+	ctx = logger.WithContext(ctx)
+
 	if len(req.Fingerprint.Hashes) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "fingerprint can't be empty")
 	}
