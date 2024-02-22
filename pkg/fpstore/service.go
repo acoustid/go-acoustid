@@ -3,11 +3,13 @@ package fpstore
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"net"
 
 	"github.com/acoustid/go-acoustid/pkg/chromaprint"
 	pb "github.com/acoustid/go-acoustid/proto/fpstore"
+	"github.com/google/uuid"
 	grpclogging "github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -27,17 +29,33 @@ type FingerprintStoreService struct {
 	metrics *FingerprintStoreMetrics
 }
 
-func interceptorLogger() grpclogging.Logger {
-	return grpclogging.LoggerFunc(func(_ context.Context, lvl grpclogging.Level, msg string, fields ...any) {
+func extractMethod(fullMethod string) string {
+	idx := strings.LastIndex(fullMethod, "/")
+	if idx == -1 {
+		return fullMethod
+	}
+	return fullMethod[idx+1:]
+}
+
+func setupUnaryRequest(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
+	traceId := uuid.New().String()
+	method := extractMethod(info.FullMethod)
+	ctx = log.Logger.With().Str("component", "fpstore").Str("method", method).Str("trace_id", traceId).Logger().WithContext(ctx)
+	return handler(ctx, req)
+}
+
+func grpcInterceptorLogger() grpclogging.Logger {
+	return grpclogging.LoggerFunc(func(ctx context.Context, lvl grpclogging.Level, msg string, fields ...any) {
+		logger := zerolog.Ctx(ctx)
 		switch lvl {
 		case grpclogging.LevelDebug:
-			log.Debug().Fields(fields).Msg(msg)
+			logger.Debug().Fields(fields).Msg(msg)
 		case grpclogging.LevelInfo:
-			log.Info().Fields(fields).Msg(msg)
+			logger.Info().Fields(fields).Msg(msg)
 		case grpclogging.LevelWarn:
-			log.Warn().Fields(fields).Msg(msg)
+			logger.Warn().Fields(fields).Msg(msg)
 		case grpclogging.LevelError:
-			log.Error().Fields(fields).Msg(msg)
+			logger.Error().Fields(fields).Msg(msg)
 		default:
 			panic(fmt.Sprintf("unknown level %v", lvl))
 		}
@@ -47,12 +65,9 @@ func interceptorLogger() grpclogging.Logger {
 func RunFingerprintStoreServer(listenAddr string, service *FingerprintStoreService) error {
 	server := grpc.NewServer(
 		grpc.ChainUnaryInterceptor(
+			setupUnaryRequest,
 			service.metrics.GrpcMetrics.UnaryServerInterceptor(),
-			grpclogging.UnaryServerInterceptor(interceptorLogger()),
-		),
-		grpc.ChainStreamInterceptor(
-			service.metrics.GrpcMetrics.StreamServerInterceptor(),
-			grpclogging.StreamServerInterceptor(interceptorLogger()),
+			grpclogging.UnaryServerInterceptor(grpcInterceptorLogger()),
 		),
 	)
 	pb.RegisterFingerprintStoreServer(server, service)
@@ -71,8 +86,7 @@ func NewFingerprintStoreService(store FingerprintStore, index FingerprintIndex, 
 
 // Implement Insert method
 func (s *FingerprintStoreService) Insert(ctx context.Context, req *pb.InsertFingerprintRequest) (*pb.InsertFingerprintResponse, error) {
-	logger := log.Logger.With().Str("component", "fpstore").Str("method", "Insert").Logger()
-	ctx = logger.WithContext(ctx)
+	logger := zerolog.Ctx(ctx)
 
 	fp := req.Fingerprint
 	if fp == nil {
@@ -83,7 +97,7 @@ func (s *FingerprintStoreService) Insert(ctx context.Context, req *pb.InsertFing
 	}
 	id, err := s.store.Insert(ctx, fp)
 	if err != nil {
-		log.Printf("failed to insert fingerprint: %v", err)
+		logger.Err(err).Msg("failed to insert fingerprint")
 		return nil, status.Error(codes.Internal, "failed to insert fingerprint")
 	}
 	s.cache.Set(ctx, id, fp)
@@ -133,8 +147,6 @@ func (s *FingerprintStoreService) getFingerprints(ctx context.Context, ids []uin
 }
 
 func (s *FingerprintStoreService) compareFingerprints(ctx context.Context, query *pb.Fingerprint, ids []uint64, minScore float32) ([]*pb.MatchingFingerprint, error) {
-	logger := zerolog.Ctx(ctx)
-
 	fingerprints, err := s.getFingerprints(ctx, ids)
 	if err != nil {
 		return nil, err
@@ -161,9 +173,6 @@ func (s *FingerprintStoreService) compareFingerprints(ctx context.Context, query
 }
 
 func (s *FingerprintStoreService) Get(ctx context.Context, req *pb.GetFingerprintRequest) (*pb.GetFingerprintResponse, error) {
-	logger := log.Logger.With().Str("component", "fpstore").Str("method", "Get").Logger()
-	ctx = logger.WithContext(ctx)
-
 	id := req.Id
 	if id == 0 {
 		return nil, status.Error(codes.InvalidArgument, "id is required")
@@ -179,9 +188,6 @@ func (s *FingerprintStoreService) Get(ctx context.Context, req *pb.GetFingerprin
 }
 
 func (s *FingerprintStoreService) Compare(ctx context.Context, req *pb.CompareFingerprintRequest) (*pb.CompareFingerprintResponse, error) {
-	logger := log.Logger.With().Str("component", "fpstore").Str("method", "Compare").Logger()
-	ctx = logger.WithContext(ctx)
-
 	if len(req.Fingerprint.Hashes) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "fingerprint can't be empty")
 	}
@@ -200,8 +206,7 @@ const FastModeFactor = 1
 const SlowModeFactor = 4
 
 func (s *FingerprintStoreService) Search(ctx context.Context, req *pb.SearchFingerprintRequest) (*pb.SearchFingerprintResponse, error) {
-	logger := log.Logger.With().Str("component", "fpstore").Str("method", "Search").Logger()
-	ctx = logger.WithContext(ctx)
+	logger := zerolog.Ctx(ctx)
 
 	if len(req.Fingerprint.Hashes) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "fingerprint can't be empty")
