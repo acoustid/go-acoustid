@@ -13,6 +13,8 @@ import (
 	pb "github.com/acoustid/go-acoustid/proto/fpstore"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/health"
+	"google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/reflection"
 	"google.golang.org/grpc/status"
 )
@@ -32,6 +34,7 @@ func FingerprintStoreServiceInterceptor(ctx context.Context, req interface{}, in
 func RunFingerprintStoreServer(listenAddr string, service pb.FingerprintStoreServer) error {
 	server := grpc.NewServer(grpc.UnaryInterceptor(FingerprintStoreServiceInterceptor))
 	pb.RegisterFingerprintStoreServer(server, service)
+	grpc_health_v1.RegisterHealthServer(server, health.NewServer())
 	reflection.Register(server)
 	lis, err := net.Listen("tcp", listenAddr)
 	if err != nil {
