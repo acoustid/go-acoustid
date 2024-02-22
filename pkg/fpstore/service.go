@@ -7,10 +7,10 @@ import (
 
 	"net"
 
-	"github.com/rs/zerolog/log"
-
 	"github.com/acoustid/go-acoustid/pkg/chromaprint"
 	pb "github.com/acoustid/go-acoustid/proto/fpstore"
+	grpclogging "github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
+	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/health"
@@ -21,18 +21,40 @@ import (
 
 type FingerprintStoreService struct {
 	pb.UnimplementedFingerprintStoreServer
-	store FingerprintStore
-	index FingerprintIndex
-	cache FingerprintCache
+	store   FingerprintStore
+	index   FingerprintIndex
+	cache   FingerprintCache
+	metrics *FingerprintStoreMetrics
 }
 
-func FingerprintStoreServiceInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
-	log.Info().Str("method", info.FullMethod).Msg("Handling request")
-	return handler(ctx, req)
+func interceptorLogger() grpclogging.Logger {
+	return grpclogging.LoggerFunc(func(_ context.Context, lvl grpclogging.Level, msg string, fields ...any) {
+		switch lvl {
+		case grpclogging.LevelDebug:
+			log.Debug().Fields(fields).Msg(msg)
+		case grpclogging.LevelInfo:
+			log.Info().Fields(fields).Msg(msg)
+		case grpclogging.LevelWarn:
+			log.Warn().Fields(fields).Msg(msg)
+		case grpclogging.LevelError:
+			log.Error().Fields(fields).Msg(msg)
+		default:
+			panic(fmt.Sprintf("unknown level %v", lvl))
+		}
+	})
 }
 
-func RunFingerprintStoreServer(listenAddr string, service pb.FingerprintStoreServer) error {
-	server := grpc.NewServer(grpc.UnaryInterceptor(FingerprintStoreServiceInterceptor))
+func RunFingerprintStoreServer(listenAddr string, service *FingerprintStoreService) error {
+	server := grpc.NewServer(
+		grpc.ChainUnaryInterceptor(
+			service.metrics.GrpcMetrics.UnaryServerInterceptor(),
+			grpclogging.UnaryServerInterceptor(interceptorLogger()),
+		),
+		grpc.ChainStreamInterceptor(
+			service.metrics.GrpcMetrics.StreamServerInterceptor(),
+			grpclogging.StreamServerInterceptor(interceptorLogger()),
+		),
+	)
 	pb.RegisterFingerprintStoreServer(server, service)
 	grpc_health_v1.RegisterHealthServer(server, health.NewServer())
 	reflection.Register(server)
@@ -43,8 +65,8 @@ func RunFingerprintStoreServer(listenAddr string, service pb.FingerprintStoreSer
 	return server.Serve(lis)
 }
 
-func NewFingerprintStoreService(store FingerprintStore, index FingerprintIndex, cache FingerprintCache) *FingerprintStoreService {
-	return &FingerprintStoreService{store: store, index: index, cache: cache}
+func NewFingerprintStoreService(store FingerprintStore, index FingerprintIndex, cache FingerprintCache, metrics *FingerprintStoreMetrics) *FingerprintStoreService {
+	return &FingerprintStoreService{store: store, index: index, cache: cache, metrics: metrics}
 }
 
 // Implement Insert method
@@ -96,6 +118,9 @@ func (s *FingerprintStoreService) getFingerprints(ctx context.Context, ids []uin
 			missingIds = append(missingIds, id)
 		}
 	}
+
+	s.metrics.CacheHits.Add(float64(len(ids) - len(missingIds)))
+	s.metrics.CacheMisses.Add(float64(len(missingIds)))
 
 	if len(missingIds) > 0 {
 		fps, err := s.store.GetMulti(ctx, missingIds)
