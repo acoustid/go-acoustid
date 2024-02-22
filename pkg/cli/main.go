@@ -48,6 +48,8 @@ func Setup(c *cli.Context) error {
 		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stdout})
 	}
 
+	zerolog.DefaultContextLogger = &log.Logger
+
 	return nil
 }
 

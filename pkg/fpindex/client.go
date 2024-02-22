@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	pb "github.com/acoustid/go-acoustid/proto/index"
+	"github.com/rs/zerolog"
 )
 
 const kPrefixOK = "OK "
@@ -154,6 +155,8 @@ func (c *IndexClient) Close(ctx context.Context) error {
 }
 
 func (c *IndexClient) sendRequest(ctx context.Context, request string) (string, error) {
+	logger := zerolog.Ctx(ctx)
+
 	deadline, hasDeadline := ctx.Deadline()
 	if hasDeadline || c.hasDeadline {
 		c.conn.SetWriteDeadline(deadline)
@@ -191,13 +194,15 @@ func (c *IndexClient) sendRequest(ctx context.Context, request string) (string, 
 	}
 
 	if strings.HasPrefix(response, kPrefixERR) {
+		logger.Error().Str("request", request).Str("response", response).Msgf("eror response from index")
 		response = strings.TrimPrefix(response, kPrefixERR)
 		c.numResponses += 1
 		return "", errors.New(response)
 	}
 
 	c.hasError = true
-	return "", fmt.Errorf("Invalid response: %v", response)
+	logger.Error().Str("request", request).Str("response", response).Msgf("invalid response from index")
+	return "", fmt.Errorf("invalid response: %v", response)
 }
 
 func (c *IndexClient) Ping(ctx context.Context) error {

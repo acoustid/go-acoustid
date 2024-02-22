@@ -3,7 +3,6 @@ package fpstore
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"net"
 
@@ -198,6 +197,9 @@ const FastModeFactor = 1
 const SlowModeFactor = 4
 
 func (s *FingerprintStoreService) Search(ctx context.Context, req *pb.SearchFingerprintRequest) (*pb.SearchFingerprintResponse, error) {
+	logger := log.Logger.With().Str("component", "fpstore").Str("method", "Search").Logger()
+	ctx = logger.WithContext(ctx)
+
 	if len(req.Fingerprint.Hashes) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "fingerprint can't be empty")
 	}
@@ -219,13 +221,11 @@ func (s *FingerprintStoreService) Search(ctx context.Context, req *pb.SearchFing
 
 	candidateIds, err := s.index.Search(ctx, req.Fingerprint, maxCandidateIds)
 	if err != nil {
-		log.Err(err).Msg("failed to search index")
+		logger.Err(err).Msg("failed to search index")
 		return nil, status.Error(codes.Internal, "failed to search index")
 	}
 
-	log.Debug().Int("candidates", len(candidateIds)).Msg("received candidates")
-
-	startTime := time.Now()
+	logger.Debug().Int("candidates", len(candidateIds)).Msg("received candidates")
 
 	results, err := s.compareFingerprints(ctx, req.Fingerprint, candidateIds, req.MinScore)
 	if err != nil {
@@ -234,8 +234,6 @@ func (s *FingerprintStoreService) Search(ctx context.Context, req *pb.SearchFing
 	if len(results) > maxResults {
 		results = results[:maxResults]
 	}
-
-	log.Debug().Dur("duration", time.Since(startTime)).Int("results", len(results)).Msg("search finished")
 
 	return &pb.SearchFingerprintResponse{Results: results}, nil
 }
