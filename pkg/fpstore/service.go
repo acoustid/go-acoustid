@@ -3,7 +3,6 @@ package fpstore
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"net"
 
@@ -29,18 +28,9 @@ type FingerprintStoreService struct {
 	metrics *FingerprintStoreMetrics
 }
 
-func extractMethod(fullMethod string) string {
-	idx := strings.LastIndex(fullMethod, "/")
-	if idx == -1 {
-		return fullMethod
-	}
-	return fullMethod[idx+1:]
-}
-
 func setupUnaryRequest(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
 	traceId := uuid.New().String()
-	method := extractMethod(info.FullMethod)
-	ctx = log.Logger.With().Str("component", "fpstore").Str("method", method).Str("trace_id", traceId).Logger().WithContext(ctx)
+	ctx = log.Logger.With().Str("component", "fpstore").Str("trace_id", traceId).Logger().WithContext(ctx)
 	return handler(ctx, req)
 }
 
