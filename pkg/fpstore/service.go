@@ -147,6 +147,8 @@ func (s *FingerprintStoreService) getFingerprints(ctx context.Context, ids []uin
 }
 
 func (s *FingerprintStoreService) compareFingerprints(ctx context.Context, query *pb.Fingerprint, ids []uint64, minScore float32) ([]*pb.MatchingFingerprint, error) {
+	logger := zerolog.Ctx(ctx)
+
 	fingerprints, err := s.getFingerprints(ctx, ids)
 	if err != nil {
 		return nil, err
