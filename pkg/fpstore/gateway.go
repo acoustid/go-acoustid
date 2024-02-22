@@ -67,7 +67,7 @@ func RunGateway(c *cli.Context) error {
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithDefaultServiceConfig(`{"loadBalancingPolicy":"round_robin"}`),
 	}
-	endpoint := net.JoinHostPort(GatewayServerHostFlag.Get(c), strconv.Itoa(GatewayServerPortFlag.Get(c)))
+	endpoint := "dns:///" + net.JoinHostPort(GatewayServerHostFlag.Get(c), strconv.Itoa(GatewayServerPortFlag.Get(c)))
 	err := gw.RegisterFingerprintStoreHandlerFromEndpoint(ctx, mux, endpoint, opts)
 	if err != nil {
 		return err
