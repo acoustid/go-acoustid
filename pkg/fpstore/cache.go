@@ -39,7 +39,7 @@ func (c *RedisFingerprintCache) GetMulti(ctx context.Context, ids []uint64) (map
 	}
 	values, err := c.cache.MGet(ctx, keys...).Result()
 	if err != nil {
-		return nil, errors.WithMessage(err, "failed to get fingerprints from cache")
+		return nil, errors.WithMessagef(err, "failed to get %v fingerprints from cache", len(keys))
 	}
 	fpMap := make(map[uint64]*pb.Fingerprint, len(ids))
 	for i, value := range values {
