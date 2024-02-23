@@ -3,6 +3,7 @@ package fpstore
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"net"
@@ -39,6 +40,11 @@ func setupUnaryRequest(ctx context.Context, req interface{}, info *grpc.UnarySer
 func grpcInterceptorLogger() grpclogging.Logger {
 	return grpclogging.LoggerFunc(func(ctx context.Context, lvl grpclogging.Level, msg string, fields ...any) {
 		logger := zerolog.Ctx(ctx)
+		for i := 0; i < len(fields); i += 2 {
+			if key, ok := fields[i].(string); ok {
+				fields[i] = strings.ReplaceAll(key, ".", "_")
+			}
+		}
 		switch lvl {
 		case grpclogging.LevelDebug:
 			logger.Debug().Fields(fields).Msg(msg)
