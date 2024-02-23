@@ -164,8 +164,8 @@ func (s *FingerprintStoreService) compareFingerprints(ctx context.Context, query
 		}
 		score, err := chromaprint.CompareFingerprints(query, fp)
 		if err != nil {
-			logger.Err(err).Msg("failed to compare fingerprints")
-			return nil, status.Error(codes.Internal, "failed to compare fingerprints")
+			logger.Debug().Err(err).Msg("failed to compare fingerprints")
+			continue
 		}
 		if score >= minScore {
 			results = append(results, &pb.MatchingFingerprint{Id: id, Score: score})
