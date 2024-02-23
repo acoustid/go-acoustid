@@ -12,137 +12,97 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-var PostgresHost = cli.StringFlag{
-	Name:    "postgres-host",
-	Usage:   "Postgres server address",
-	Value:   "localhost",
-	EnvVars: []string{"ACOUSTID_EXPORT_POSTGRES_HOST"},
+type storageFlags struct {
+	Bucket          *cli.StringFlag
+	Endpoint        *cli.StringFlag
+	AccessKeyId     *cli.StringFlag
+	SecretAccessKey *cli.StringFlag
 }
 
-var PostgresPort = cli.IntFlag{
-	Name:    "postgres-port",
-	Usage:   "Postgres server port",
-	Value:   5432,
-	EnvVars: []string{"ACOUSTID_EXPORT_POSTGRES_PORT"},
-}
-
-var PostgresUser = cli.StringFlag{
-	Name:    "postgres-user",
-	Usage:   "Postgres server user",
-	Value:   "acoustid",
-	EnvVars: []string{"ACOUSTID_EXPORT_POSTGRES_USER"},
-}
-
-var PostgresPassword = cli.StringFlag{
-	Name:    "postgres-password",
-	Usage:   "Postgres server password",
-	Value:   "",
-	EnvVars: []string{"ACOUSTID_EXPORT_POSTGRES_PASSWORD"},
-}
-
-var PostgresDatabase = cli.StringFlag{
-	Name:    "postgres-database",
-	Usage:   "Postgres server database",
-	Value:   "acoustid",
-	EnvVars: []string{"ACOUSTID_EXPORT_POSTGRES_DATABASE"},
-}
-
-var StorageBucket = cli.StringFlag{
-	Name:     "storage-bucket",
-	Usage:    "S3-compatible bucket",
-	EnvVars:  []string{"ACOUSTID_EXPORT_STORAGE_BUCKET"},
-	Required: true,
-}
-
-var StorageEndpoint = cli.StringFlag{
-	Name:     "storage-endpoint",
-	Usage:    "S3-compatible endpoint",
-	EnvVars:  []string{"ACOUSTID_EXPORT_STORAGE_ENDPOINT"},
-	Required: true,
-}
-
-var StorageAccessKeyId = cli.StringFlag{
-	Name:    "storage-access-key-id",
-	Usage:   "S3-compatible access key ID",
-	EnvVars: []string{"ACOUSTID_EXPORT_STORAGE_ACCESS_KEY_ID"},
-}
-
-var StorageSecretAccessKey = cli.StringFlag{
-	Name:    "storage-secret-access-key",
-	Usage:   "S3-compatible secret access key",
-	EnvVars: []string{"ACOUSTID_EXPORT_STORAGE_SECRET_ACCESS_KEY"},
-}
-
-func ConnectToPostgres(c *cli.Context) (*sql.DB, error) {
-	var config common.DatabaseConfig
-	config.Host = c.String(PostgresHost.Name)
-	config.Port = c.Int(PostgresPort.Name)
-	config.User = c.String(PostgresUser.Name)
-	config.Password = c.String(PostgresPassword.Name)
-	config.Database = c.String(PostgresDatabase.Name)
-
-	db, err := config.Connect()
-	if err != nil {
-		return nil, errors.WithMessage(err, "failed to connect to database")
+func NewStorageFlags(prefix string, envPrefix string) *storageFlags {
+	return &storageFlags{
+		Bucket: &cli.StringFlag{
+			Name:    prefix + "bucket",
+			Usage:   "S3-compatible bucket",
+			EnvVars: []string{envPrefix + "BUCKET"},
+		},
+		Endpoint: &cli.StringFlag{
+			Name:    prefix + "endpoint",
+			Usage:   "S3-compatible endpoint",
+			EnvVars: []string{envPrefix + "ENDPOINT"},
+		},
+		AccessKeyId: &cli.StringFlag{
+			Name:    prefix + "access-key-id",
+			Usage:   "S3-compatible access key ID",
+			EnvVars: []string{envPrefix + "ACCESS_KEY_ID"},
+		},
+		SecretAccessKey: &cli.StringFlag{
+			Name:    prefix + "secret-access-key",
+			Usage:   "S3-compatible secret access key",
+			EnvVars: []string{envPrefix + "SECRET_ACCESS_KEY"},
+		},
 	}
-
-	return db, nil
 }
 
-func ConnectToStorage(c *cli.Context) (*minio.Client, error) {
-	client, err := minio.New(StorageEndpoint.Get(c), &minio.Options{
-		Creds:  credentials.NewStaticV4(StorageAccessKeyId.Get(c), StorageSecretAccessKey.Get(c), ""),
+func (f *storageFlags) Flags() []cli.Flag {
+	return []cli.Flag{
+		f.Bucket,
+		f.Endpoint,
+		f.AccessKeyId,
+		f.SecretAccessKey,
+	}
+}
+
+func (f *storageFlags) Connect(c *cli.Context) (*minio.Client, string, error) {
+	client, err := minio.New(f.Endpoint.Get(c), &minio.Options{
+		Creds:  credentials.NewStaticV4(f.AccessKeyId.Get(c), f.SecretAccessKey.Get(c), ""),
 		Secure: true,
 	})
 	if err != nil {
-		return nil, errors.WithMessage(err, "failed to connect to storage")
+		return nil, "", errors.WithMessage(err, "failed to connect to storage")
 	}
 
-	return client, nil
+	bucket := f.Bucket.Get(c)
+
+	return client, bucket, nil
 }
 
-func RunExport(c *cli.Context) error {
-	db, err := ConnectToPostgres(c)
-	if err != nil {
-		return err
-	}
-
-	defer db.Close()
-
-	storage, err := ConnectToStorage(c)
-	if err != nil {
-		return err
-	}
-
-	_ = storage
-
+func RunExport(c *cli.Context, db *sql.DB, storage *minio.Client, bucket string) error {
 	log.Info().Msg("Running export")
 	return nil
 }
 
-func BuildCli() *cli.Command {
-	exportCommand := &cli.Command{
+func NewExportCommand() *cli.Command {
+	dbFlags := common.NewDatabaseCliFlags("postgres-", "ACOUSTID_EXPORT_POSTGRES_")
+	storageFlags := NewStorageFlags("storage-", "ACOUSTID_EXPORT_STORAGE_")
+	cmd := &cli.Command{
 		Name:  "export",
 		Usage: "Export public data",
-		Flags: []cli.Flag{
-			&PostgresHost,
-			&PostgresPort,
-			&PostgresUser,
-			&PostgresPassword,
-			&PostgresDatabase,
-			&StorageBucket,
-			&StorageEndpoint,
-			&StorageAccessKeyId,
-			&StorageSecretAccessKey,
-		},
-		Action: RunExport,
-	}
+		Flags: common.ConcatFlags(dbFlags.Flags(), storageFlags.Flags()),
+		Action: func(c *cli.Context) error {
+			db, err := dbFlags.Config(c).Connect()
+			if err != nil {
+				return errors.WithMessage(err, "failed to connect to database")
+			}
+			defer db.Close()
 
+			storage, bucket, err := storageFlags.Connect(c)
+			if err != nil {
+				return err
+			}
+
+			return RunExport(c, db, storage, bucket)
+		},
+	}
+	return cmd
+}
+
+func BuildCli() *cli.Command {
 	return &cli.Command{
 		Name:  "publicdata",
 		Usage: "AcoustID public data managemenr",
 		Subcommands: []*cli.Command{
-			exportCommand,
+			NewExportCommand(),
 		},
 	}
 }
