@@ -2,7 +2,7 @@ package fpstore
 
 import (
 	"context"
-	"encoding/base64"
+	"encoding/base32"
 	"fmt"
 	"strings"
 	"time"
@@ -51,7 +51,7 @@ func setTraceId(ctx context.Context, traceId string) context.Context {
 
 func generateTraceId() string {
 	traceId := uuid.New()
-	return base64.URLEncoding.EncodeToString(traceId[:])
+	return base32.StdEncoding.WithPadding(base32.NoPadding).EncodeToString(traceId[:])
 }
 
 func setupUnaryRequest(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
