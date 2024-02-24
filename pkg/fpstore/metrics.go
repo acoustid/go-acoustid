@@ -28,7 +28,11 @@ func NewFingerprintStoreMetrics(reg *prometheus.Registry) *FingerprintStoreMetri
 			Name:      "cache_misses_total",
 			Help:      "Number of fingerprint cache misses",
 		}),
-		GrpcMetrics: grpcprom.NewServerMetrics(),
+		GrpcMetrics: grpcprom.NewServerMetrics(
+			grpcprom.WithServerHandlingTimeHistogram(
+				grpcprom.WithHistogramBuckets([]float64{0.01, 0.05, 0.15, 0.5, 1}),
+			),
+		),
 	}
 	reg.MustRegister(metrics.CacheHits)
 	reg.MustRegister(metrics.CacheMisses)
