@@ -32,9 +32,15 @@ func (f IndexClientFactory) ValidateObject(ctx context.Context, obj *pool.Pooled
 	if !client.IsOK() {
 		return false
 	}
-	err := client.Ping(ctx)
-	if err != nil {
+	now := time.Now()
+	if now.Sub(obj.CreateTime) > f.Config.MaxKeepAlive {
 		return false
+	}
+	if now.Sub(obj.LastBorrowTime) > f.Config.PingInterval {
+		err := client.Ping(ctx)
+		if err != nil {
+			return false
+		}
 	}
 	return true
 }
@@ -62,6 +68,7 @@ func NewIndexClientPool(config *IndexConfig, limit int) *IndexClientPool {
 	poolConfig.MaxTotal = limit
 	poolConfig.MaxIdle = limit
 	poolConfig.TestWhileIdle = true
+	poolConfig.TestOnBorrow = true
 	poolConfig.TimeBetweenEvictionRuns = 10 * time.Second
 	pool := pool.NewObjectPool(ctx, factory, poolConfig)
 	return &IndexClientPool{Pool: pool}
