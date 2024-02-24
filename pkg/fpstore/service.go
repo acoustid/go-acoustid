@@ -2,6 +2,7 @@ package fpstore
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"strings"
 	"time"
@@ -20,6 +21,7 @@ import (
 	"google.golang.org/grpc/health"
 	"google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/keepalive"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/reflection"
 	"google.golang.org/grpc/status"
 )
@@ -47,8 +49,22 @@ func setTraceId(ctx context.Context, traceId string) context.Context {
 	return context.WithValue(ctx, traceIdContextKey, traceId)
 }
 
+func generateTraceId() string {
+	traceId := uuid.New()
+	return base64.URLEncoding.EncodeToString(traceId[:])
+}
+
 func setupUnaryRequest(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
-	traceId := uuid.New().String()
+	var traceId string
+	if meta, ok := metadata.FromIncomingContext(ctx); ok {
+		traceIds := meta.Get("trace_id")
+		if len(traceIds) > 0 && traceIds[0] != "" {
+			traceId = traceIds[0]
+		}
+	}
+	if traceId == "" {
+		traceId = generateTraceId()
+	}
 	ctx = setTraceId(ctx, traceId)
 	ctx = log.Logger.With().Str("component", "fpstore").Str("trace_id", traceId).Logger().WithContext(ctx)
 	return handler(ctx, req)
