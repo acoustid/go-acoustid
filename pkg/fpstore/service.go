@@ -11,6 +11,7 @@ import (
 	"github.com/acoustid/go-acoustid/pkg/chromaprint"
 	pb "github.com/acoustid/go-acoustid/proto/fpstore"
 	"github.com/google/uuid"
+	grpcprom "github.com/grpc-ecosystem/go-grpc-middleware/providers/prometheus"
 	grpclogging "github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -31,8 +32,24 @@ type FingerprintStoreService struct {
 	metrics *FingerprintStoreMetrics
 }
 
+type traceIdContextKeyType string
+
+const traceIdContextKey traceIdContextKeyType = "traceId"
+
+func getTraceId(ctx context.Context) string {
+	if traceId, ok := ctx.Value(traceIdContextKey).(string); ok {
+		return traceId
+	}
+	return ""
+}
+
+func setTraceId(ctx context.Context, traceId string) context.Context {
+	return context.WithValue(ctx, traceIdContextKey, traceId)
+}
+
 func setupUnaryRequest(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
 	traceId := uuid.New().String()
+	ctx = setTraceId(ctx, traceId)
 	ctx = log.Logger.With().Str("component", "fpstore").Str("trace_id", traceId).Logger().WithContext(ctx)
 	return handler(ctx, req)
 }
@@ -64,7 +81,7 @@ func RunFingerprintStoreServer(listenAddr string, service *FingerprintStoreServi
 	server := grpc.NewServer(
 		grpc.ChainUnaryInterceptor(
 			setupUnaryRequest,
-			service.metrics.GrpcMetrics.UnaryServerInterceptor(),
+			service.metrics.GrpcMetrics.UnaryServerInterceptor(grpcprom.WithExemplarFromContext(examplarFromContext)),
 			grpclogging.UnaryServerInterceptor(grpcInterceptorLogger()),
 		),
 		grpc.KeepaliveParams(keepalive.ServerParameters{
