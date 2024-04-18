@@ -24,7 +24,7 @@ type RedisFingerprintCache struct {
 func NewRedisFingerprintCache(cache redis.Cmdable) *RedisFingerprintCache {
 	return &RedisFingerprintCache{
 		cache: cache,
-		ttl:   7 * 24 * time.Hour,
+		ttl:   90 * 24 * time.Hour,
 	}
 }
 
