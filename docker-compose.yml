@@ -30,6 +30,4 @@ services:
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: notreallyapassword
-      POSTGRES_HOST: localhost
-      POSTGRES_PORT: 5432
       ACOUSTID_SQL_DIR: /mnt/acoustid/sql
