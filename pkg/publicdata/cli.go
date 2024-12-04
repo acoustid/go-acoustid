@@ -14,6 +14,7 @@ type storageFlags struct {
 	Endpoint        *cli.StringFlag
 	AccessKeyId     *cli.StringFlag
 	SecretAccessKey *cli.StringFlag
+	UseSSL          *cli.BoolFlag
 }
 
 func NewStorageFlags(prefix string, envPrefix string) *storageFlags {
@@ -38,6 +39,11 @@ func NewStorageFlags(prefix string, envPrefix string) *storageFlags {
 			Usage:   "S3-compatible secret access key",
 			EnvVars: []string{envPrefix + "SECRET_ACCESS_KEY"},
 		},
+		UseSSL: &cli.BoolFlag{
+			Name:    prefix + "use-ssl",
+			Usage:   "S3-compatible https",
+			EnvVars: []string{envPrefix + "USE_SSL"},
+		},
 	}
 }
 
@@ -53,7 +59,7 @@ func (f *storageFlags) Flags() []cli.Flag {
 func (f *storageFlags) Connect(c *cli.Context) (*minio.Client, string, error) {
 	client, err := minio.New(f.Endpoint.Get(c), &minio.Options{
 		Creds:  credentials.NewStaticV4(f.AccessKeyId.Get(c), f.SecretAccessKey.Get(c), ""),
-		Secure: true,
+		Secure: f.UseSSL.Get(c),
 	})
 	if err != nil {
 		return nil, "", errors.WithMessage(err, "failed to connect to storage")

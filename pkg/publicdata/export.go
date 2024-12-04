@@ -65,7 +65,7 @@ func (ex *exporter) ExportQuery(ctx context.Context, path string, query string) 
 
 	wrappedQuery := fmt.Sprintf("SELECT convert_to(json_strip_nulls(row_to_json(r))::text, 'UTF8') FROM (%s) r", query)
 	rows, err := ex.db.QueryContext(ctx, wrappedQuery)
-	if err != err {
+	if err != nil {
 		return err
 	}
 	for rows.Next() {
@@ -111,7 +111,7 @@ func (ex *exporter) ExportQuery(ctx context.Context, path string, query string) 
 }
 
 func (ex *exporter) ExportDeltaFile(ctx context.Context, path string, name string, queryTmpl string, startTime, endTime time.Time) error {
-	logger := log.With().Str("table", name).Time("date", startTime).Logger()
+	logger := log.With().Str("table", name).Str("date", startTime.Format("2006-01-02")).Logger()
 
 	logger.Info().Msgf("Exporting data file")
 
@@ -129,10 +129,23 @@ func (ex *exporter) ExportDeltaFile(ctx context.Context, path string, name strin
 	return nil
 }
 
-func (ex *exporter) ExportDeltaFiles(ctx context.Context, startTime, endTime time.Time) error {
-	log.Info().Msgf("Exporting data files for %s-%s", startTime.Format("2006-01-02"), endTime.Format("2006-01-02"))
+func addFolder(changedFolders map[string]struct{}, folder string) {
+	for {
+		changedFolders[folder+"/"] = struct{}{}
+		i := strings.LastIndexByte(folder, '/')
+		if i == -1 {
+			break
+		}
+		folder = folder[:i]
+	}
+	changedFolders[""] = struct{}{}
+}
 
-	prefix := startTime.Format("2006/2006-01/2006-01-02-")
+func (ex *exporter) ExportDeltaFiles(ctx context.Context, startTime, endTime time.Time, changedFolders map[string]struct{}) error {
+	log.Info().Str("date", startTime.Format("2006-01-02")).Msgf("Exporting data files")
+
+	directory := startTime.Format("2006/2006-01")
+	prefix := directory + startTime.Format("/2006-01-02-")
 	objects := ex.storage.ListObjects(ctx, ex.bucketName, minio.ListObjectsOptions{
 		Prefix: prefix,
 	})
@@ -157,21 +170,47 @@ func (ex *exporter) ExportDeltaFiles(ctx context.Context, startTime, endTime tim
 		if err != nil {
 			return err
 		}
+		addFolder(changedFolders, directory)
 	}
+
 	return nil
 }
 
+func (ex *exporter) CreateBucket(ctx context.Context) error {
+	exists, err := ex.storage.BucketExists(ctx, ex.bucketName)
+	if err != nil {
+		return err
+	}
+	if exists {
+		return nil
+	}
+	return ex.storage.MakeBucket(ctx, ex.bucketName, minio.MakeBucketOptions{})
+}
+
 func (ex *exporter) Run(ctx context.Context) error {
+	ex.CreateBucket(ctx)
+
+	changedFolders := make(map[string]struct{})
+
 	now := time.Now()
 	endTime := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 	for i := 0; i < ex.maxDays; i++ {
 		startTime := endTime.AddDate(0, 0, -1)
-		err := ex.ExportDeltaFiles(ctx, startTime, endTime)
+		err := ex.ExportDeltaFiles(ctx, startTime, endTime, changedFolders)
 		if err != nil {
 			return err
 		}
 		endTime = startTime
 	}
+
+	idx := indexer{storage: ex.storage, bucketName: ex.bucketName}
+	for folder := range changedFolders {
+		err := idx.UpdateIndexFile(ctx, folder, false)
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 

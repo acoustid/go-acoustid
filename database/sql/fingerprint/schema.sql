@@ -38,6 +38,7 @@ CREATE TABLE public.fingerprint (
     format_id integer,
     track_id integer NOT NULL,
     submission_count integer NOT NULL,
+    updated timestamp with time zone,
     CONSTRAINT fingerprint_bitrate_check CHECK ((bitrate > 0)),
     CONSTRAINT fingerprint_length_check CHECK ((length > 0))
 );
@@ -107,7 +108,8 @@ CREATE TABLE public.meta (
     album_artist character varying,
     track_no integer,
     disc_no integer,
-    year integer
+    year integer,
+    created timestamp with time zone DEFAULT now() NOT NULL
 );
 
 
@@ -129,7 +131,8 @@ CREATE TABLE public.track (
     id integer NOT NULL,
     created timestamp with time zone DEFAULT now() NOT NULL,
     gid uuid NOT NULL,
-    new_id integer
+    new_id integer,
+    updated timestamp with time zone
 );
 
 
@@ -178,7 +181,8 @@ CREATE TABLE public.track_mbid (
     mbid uuid NOT NULL,
     created timestamp with time zone DEFAULT now() NOT NULL,
     submission_count integer NOT NULL,
-    disabled boolean DEFAULT false NOT NULL
+    disabled boolean DEFAULT false NOT NULL,
+    updated timestamp with time zone
 );
 
 
@@ -202,7 +206,8 @@ CREATE TABLE public.track_meta (
     track_id integer NOT NULL,
     meta_id integer NOT NULL,
     created timestamp with time zone DEFAULT now() NOT NULL,
-    submission_count integer NOT NULL
+    submission_count integer NOT NULL,
+    updated timestamp with time zone
 );
 
 
@@ -226,7 +231,8 @@ CREATE TABLE public.track_puid (
     track_id integer NOT NULL,
     puid uuid NOT NULL,
     created timestamp with time zone DEFAULT now() NOT NULL,
-    submission_count integer NOT NULL
+    submission_count integer NOT NULL,
+    updated timestamp with time zone
 );
 
 

@@ -2,15 +2,15 @@
 
 set -e
 
-if [ -n "$POSTGRES_HOST" ]
-then
-    export PGHOST="$POSTGRES_HOST"
-fi
+#if [ -n "$POSTGRES_HOST" ]
+#then
+#    export PGHOST="$POSTGRES_HOST"
+#fi
 
-if [ -n "$POSTGRES_PORT" ]
-then
-    export PGPORT="$POSTGRES_PORT"
-fi
+#if [ -n "$POSTGRES_PORT" ]
+#then
+#    export PGPORT="$POSTGRES_PORT"
+#fi
 
 if [ -n "$POSTGRES_USER" ]
 then
