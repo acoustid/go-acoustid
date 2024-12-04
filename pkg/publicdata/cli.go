@@ -67,14 +67,15 @@ func (f *storageFlags) Connect(c *cli.Context) (*minio.Client, string, error) {
 	return client, bucket, nil
 }
 
-func RunExport(c *cli.Context, db *sql.DB, storage *minio.Client, bucket string) error {
+func RunExport(c *cli.Context, db *sql.DB, storage *minio.Client, bucketName string) error {
 	log.Info().Msg("Running export")
-	return nil
+	exporter := NewExporter(storage, bucketName, db)
+	return exporter.ExportLastDays(c.Context, 7)
 }
 
 func NewExportCommand() *cli.Command {
-	dbFlags := common.NewDatabaseCliFlags("postgres-", "ACOUSTID_EXPORT_POSTGRES_")
-	storageFlags := NewStorageFlags("storage-", "ACOUSTID_EXPORT_STORAGE_")
+	dbFlags := common.NewDatabaseCliFlags("postgres-", "ASERVER_EXPORT_POSTGRES_")
+	storageFlags := NewStorageFlags("storage-", "ASERVER_EXPORT_STORAGE_")
 	cmd := &cli.Command{
 		Name:  "export",
 		Usage: "Export public data",
@@ -86,12 +87,31 @@ func NewExportCommand() *cli.Command {
 			}
 			defer db.Close()
 
-			storage, bucket, err := storageFlags.Connect(c)
+			storage, bucketName, err := storageFlags.Connect(c)
 			if err != nil {
 				return err
 			}
 
-			return RunExport(c, db, storage, bucket)
+			return RunExport(c, db, storage, bucketName)
+		},
+	}
+	return cmd
+}
+
+func NewUpdateIndexFilesCommand() *cli.Command {
+	storageFlags := NewStorageFlags("storage-", "ASERVER_EXPORT_STORAGE_")
+	cmd := &cli.Command{
+		Name:  "updateindexfiles",
+		Usage: "Update index files",
+		Flags: storageFlags.Flags(),
+		Action: func(c *cli.Context) error {
+			storage, bucketName, err := storageFlags.Connect(c)
+			if err != nil {
+				return err
+			}
+
+			exporter := NewExporter(storage, bucketName, nil)
+			return exporter.UpdateIndexFile(c.Context, "", true)
 		},
 	}
 	return cmd
@@ -103,6 +123,7 @@ func BuildCli() *cli.Command {
 		Usage: "AcoustID public data managemenr",
 		Subcommands: []*cli.Command{
 			NewExportCommand(),
+			NewUpdateIndexFilesCommand(),
 		},
 	}
 }
