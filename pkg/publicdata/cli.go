@@ -1,11 +1,8 @@
 package publicdata
 
 import (
-	"database/sql"
-
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
-	"github.com/rs/zerolog/log"
 
 	"github.com/acoustid/go-acoustid/common"
 	"github.com/pkg/errors"
@@ -67,32 +64,26 @@ func (f *storageFlags) Connect(c *cli.Context) (*minio.Client, string, error) {
 	return client, bucket, nil
 }
 
-func RunExport(c *cli.Context, db *sql.DB, storage *minio.Client, bucketName string) error {
-	log.Info().Msg("Running export")
-	exporter := NewExporter(storage, bucketName, db)
-	return exporter.ExportLastDays(c.Context, 7)
-}
-
 func NewExportCommand() *cli.Command {
-	dbFlags := common.NewDatabaseCliFlags("postgres-", "ASERVER_EXPORT_POSTGRES_")
 	storageFlags := NewStorageFlags("storage-", "ASERVER_EXPORT_STORAGE_")
+	dbFlags := common.NewDatabaseCliFlags("postgres-", "ASERVER_EXPORT_POSTGRES_")
 	cmd := &cli.Command{
 		Name:  "export",
 		Usage: "Export public data",
 		Flags: common.ConcatFlags(dbFlags.Flags(), storageFlags.Flags()),
 		Action: func(c *cli.Context) error {
+			storage, bucketName, err := storageFlags.Connect(c)
+			if err != nil {
+				return err
+			}
+
 			db, err := dbFlags.Config(c).Connect()
 			if err != nil {
 				return errors.WithMessage(err, "failed to connect to database")
 			}
 			defer db.Close()
 
-			storage, bucketName, err := storageFlags.Connect(c)
-			if err != nil {
-				return err
-			}
-
-			return RunExport(c, db, storage, bucketName)
+			return ExportDataFiles(c.Context, storage, bucketName, db, 7)
 		},
 	}
 	return cmd
@@ -110,8 +101,7 @@ func NewUpdateIndexFilesCommand() *cli.Command {
 				return err
 			}
 
-			exporter := NewExporter(storage, bucketName, nil)
-			return exporter.UpdateIndexFile(c.Context, "", true)
+			return UpdateIndexFiles(c.Context, storage, bucketName)
 		},
 	}
 	return cmd
