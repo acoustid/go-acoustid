@@ -5,6 +5,23 @@ jobs:
   build:
     name: Build
     runs-on: ubuntu-22.04
+
+    services:
+
+      redis:
+        image: redis:alpine
+        ports:
+          - 6379/tcp
+
+      postgresql:
+        image: quay.io/acoustid/postgresql:master
+        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+        ports:
+          - 5432/tcp
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+
     steps:
 
     - name: Check out code
@@ -41,42 +58,6 @@ jobs:
 
     - name: Build binaries
       run: ./scripts/ci/build.sh
-
-    - name: Upload binaries
-      uses: actions/upload-artifact@v4
-      with:
-        name: dist
-        path: dist
-
-    services:
-
-      redis:
-        image: redis:alpine
-        ports:
-          - 6379/tcp
-
-      postgresql:
-        image: quay.io/acoustid/postgresql:master
-        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
-        ports:
-          - 5432/tcp
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: password
-
-  docker:
-    name: Build Docker images
-    runs-on: ubuntu-22.04
-    needs: build
-    steps:
-
-    - name: Check out code
-      uses: actions/checkout@v4
-
-    - name: Download binaries
-      uses: actions/download-artifact@v4
-      with:
-        name: dist
 
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
