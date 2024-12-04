@@ -10,7 +10,74 @@ import (
 
 	_ "github.com/lib/pq"
 	"github.com/rs/zerolog/log"
+	"github.com/urfave/cli/v2"
 )
+
+func ConcatFlags(slices ...[]cli.Flag) []cli.Flag {
+	var result []cli.Flag
+	for _, slice := range slices {
+		result = append(result, slice...)
+	}
+	return result
+}
+
+type DatabaseCliFlags struct {
+	Database *cli.StringFlag
+	Host     *cli.StringFlag
+	Port     *cli.IntFlag
+	User     *cli.StringFlag
+	Password *cli.StringFlag
+}
+
+func NewDatabaseCliFlags(prefix string, envPrefix string) *DatabaseCliFlags {
+	return &DatabaseCliFlags{
+		Database: &cli.StringFlag{
+			Name:    prefix + "database",
+			Usage:   "Database name",
+			EnvVars: []string{envPrefix + "DATABASE"},
+		},
+		Host: &cli.StringFlag{
+			Name:    prefix + "host",
+			Usage:   "Database host",
+			EnvVars: []string{envPrefix + "HOST"},
+		},
+		Port: &cli.IntFlag{
+			Name:    prefix + "port",
+			Usage:   "Database port",
+			EnvVars: []string{envPrefix + "PORT"},
+		},
+		User: &cli.StringFlag{
+			Name:    prefix + "user",
+			Usage:   "Database user",
+			EnvVars: []string{envPrefix + "USER"},
+		},
+		Password: &cli.StringFlag{
+			Name:    prefix + "password",
+			Usage:   "Database password",
+			EnvVars: []string{envPrefix + "PASSWORD"},
+		},
+	}
+}
+
+func (f *DatabaseCliFlags) Flags() []cli.Flag {
+	return []cli.Flag{
+		f.Database,
+		f.Host,
+		f.Port,
+		f.User,
+		f.Password,
+	}
+}
+
+func (f *DatabaseCliFlags) Config(c *cli.Context) *DatabaseConfig {
+	cfg := NewDatabaseConfig()
+	cfg.Database = f.Database.Get(c)
+	cfg.Host = f.Host.Get(c)
+	cfg.Port = f.Port.Get(c)
+	cfg.User = f.User.Get(c)
+	cfg.Password = f.Password.Get(c)
+	return cfg
+}
 
 type DatabaseConfig struct {
 	Database string

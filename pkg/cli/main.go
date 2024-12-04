@@ -5,6 +5,7 @@ import (
 
 	"github.com/acoustid/go-acoustid/pkg/fpindex"
 	"github.com/acoustid/go-acoustid/pkg/fpstore"
+	"github.com/acoustid/go-acoustid/pkg/publicdata"
 	"github.com/mattn/go-isatty"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -65,6 +66,7 @@ func BuildApp() *cli.App {
 		Commands: []*cli.Command{
 			fpstore.BuildCli(),
 			fpindex.BuildCli(),
+			publicdata.BuildCli(),
 		},
 	}
 }
