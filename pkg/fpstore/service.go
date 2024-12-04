@@ -2,7 +2,9 @@ package fpstore
 
 import (
 	"context"
+	"encoding/base32"
 	"fmt"
+	"strings"
 	"time"
 
 	"net"
@@ -10,6 +12,7 @@ import (
 	"github.com/acoustid/go-acoustid/pkg/chromaprint"
 	pb "github.com/acoustid/go-acoustid/proto/fpstore"
 	"github.com/google/uuid"
+	grpcprom "github.com/grpc-ecosystem/go-grpc-middleware/providers/prometheus"
 	grpclogging "github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -18,6 +21,7 @@ import (
 	"google.golang.org/grpc/health"
 	"google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/keepalive"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/reflection"
 	"google.golang.org/grpc/status"
 )
@@ -30,8 +34,38 @@ type FingerprintStoreService struct {
 	metrics *FingerprintStoreMetrics
 }
 
+type traceIdContextKeyType string
+
+const traceIdContextKey traceIdContextKeyType = "traceId"
+
+func getTraceId(ctx context.Context) string {
+	if traceId, ok := ctx.Value(traceIdContextKey).(string); ok {
+		return traceId
+	}
+	return ""
+}
+
+func setTraceId(ctx context.Context, traceId string) context.Context {
+	return context.WithValue(ctx, traceIdContextKey, traceId)
+}
+
+func generateTraceId() string {
+	traceId := uuid.New()
+	return base32.StdEncoding.WithPadding(base32.NoPadding).EncodeToString(traceId[:])
+}
+
 func setupUnaryRequest(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
-	traceId := uuid.New().String()
+	var traceId string
+	if meta, ok := metadata.FromIncomingContext(ctx); ok {
+		traceIds := meta.Get("trace_id")
+		if len(traceIds) > 0 && traceIds[0] != "" {
+			traceId = traceIds[0]
+		}
+	}
+	if traceId == "" {
+		traceId = generateTraceId()
+	}
+	ctx = setTraceId(ctx, traceId)
 	ctx = log.Logger.With().Str("component", "fpstore").Str("trace_id", traceId).Logger().WithContext(ctx)
 	return handler(ctx, req)
 }
@@ -39,6 +73,11 @@ func setupUnaryRequest(ctx context.Context, req interface{}, info *grpc.UnarySer
 func grpcInterceptorLogger() grpclogging.Logger {
 	return grpclogging.LoggerFunc(func(ctx context.Context, lvl grpclogging.Level, msg string, fields ...any) {
 		logger := zerolog.Ctx(ctx)
+		for i := 0; i < len(fields); i += 2 {
+			if key, ok := fields[i].(string); ok {
+				fields[i] = strings.ReplaceAll(key, ".", "_")
+			}
+		}
 		switch lvl {
 		case grpclogging.LevelDebug:
 			logger.Debug().Fields(fields).Msg(msg)
@@ -58,7 +97,7 @@ func RunFingerprintStoreServer(listenAddr string, service *FingerprintStoreServi
 	server := grpc.NewServer(
 		grpc.ChainUnaryInterceptor(
 			setupUnaryRequest,
-			service.metrics.GrpcMetrics.UnaryServerInterceptor(),
+			service.metrics.GrpcMetrics.UnaryServerInterceptor(grpcprom.WithExemplarFromContext(examplarFromContext)),
 			grpclogging.UnaryServerInterceptor(grpcInterceptorLogger()),
 		),
 		grpc.KeepaliveParams(keepalive.ServerParameters{
@@ -164,8 +203,8 @@ func (s *FingerprintStoreService) compareFingerprints(ctx context.Context, query
 		}
 		score, err := chromaprint.CompareFingerprints(query, fp)
 		if err != nil {
-			logger.Err(err).Msg("failed to compare fingerprints")
-			return nil, status.Error(codes.Internal, "failed to compare fingerprints")
+			logger.Debug().Err(err).Msg("failed to compare fingerprints")
+			continue
 		}
 		if score >= minScore {
 			results = append(results, &pb.MatchingFingerprint{Id: id, Score: score})

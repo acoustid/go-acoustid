@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+
 for instance in app fingerprint ingest musicbrainz
 do
 
