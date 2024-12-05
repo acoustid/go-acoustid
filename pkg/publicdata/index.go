@@ -27,6 +27,11 @@ func NewExporter(storage *minio.Client, bucketName string, db *sql.DB) *indexer 
 	}
 }
 
+type fileInfo struct {
+	name string
+	size int64
+}
+
 func (e *indexer) UpdateIndexFile(ctx context.Context, prefix string, recursive bool) error {
 	objects := e.storage.ListObjects(ctx, e.bucketName, minio.ListObjectsOptions{
 		Prefix:    prefix,
@@ -45,7 +50,7 @@ func (e *indexer) UpdateIndexFile(ctx context.Context, prefix string, recursive 
 	sb.WriteString("</h1>\n")
 	sb.WriteString("<ul>\n")
 
-	files := make([]string, 0)
+	files := make([]fileInfo, 0)
 
 	for obj := range objects {
 		if obj.Key == "/" {
@@ -81,7 +86,7 @@ func (e *indexer) UpdateIndexFile(ctx context.Context, prefix string, recursive 
 		if strings.HasSuffix(obj.Key, "/") && recursive {
 			e.UpdateIndexFile(ctx, obj.Key, recursive)
 		}
-		files = append(files, name)
+		files = append(files, fileInfo{name: name, size: obj.Size})
 	}
 
 	sb.WriteString("<li><a href=\"index.html\">index.html</a></li>\n")
