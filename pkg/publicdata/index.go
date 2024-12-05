@@ -5,6 +5,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"strings"
 	"time"
 
@@ -59,6 +60,23 @@ func (e *indexer) UpdateIndexFile(ctx context.Context, prefix string, recursive 
 		sb.WriteString("\">")
 		sb.WriteString(name)
 		sb.WriteString("</a>")
+		if obj.Size > 0 {
+			size := float64(obj.Size)
+			unit := " B"
+			if size > 1024 {
+				size /= 1024
+				unit = " KB"
+			}
+			if size > 1024 {
+				size /= 1024
+				unit = " MB"
+			}
+			if size > 1024 {
+				size /= 1024
+				unit = " GB"
+			}
+			sb.WriteString(fmt.Sprintf(" (%.1f%s)", size, unit))
+		}
 		sb.WriteString("</li>\n")
 		if strings.HasSuffix(obj.Key, "/") && recursive {
 			e.UpdateIndexFile(ctx, obj.Key, recursive)
