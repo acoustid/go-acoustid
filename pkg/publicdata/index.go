@@ -47,7 +47,7 @@ func (e *indexer) UpdateIndexFile(ctx context.Context, prefix string, recursive 
 	files := make([]string, 0)
 
 	for obj := range objects {
-		if obj.Key == prefix+"index.html" || obj.Key == "/" {
+		if obj.Key == "/" {
 			continue
 		}
 		name := strings.TrimPrefix(obj.Key, prefix)
