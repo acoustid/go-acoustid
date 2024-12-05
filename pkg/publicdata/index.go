@@ -28,8 +28,8 @@ func NewExporter(storage *minio.Client, bucketName string, db *sql.DB) *indexer 
 }
 
 type fileInfo struct {
-	name string
-	size int64
+	name string `json:"name"`
+	size int64  `json:"size,omitempty"`
 }
 
 func (e *indexer) UpdateIndexFile(ctx context.Context, prefix string, recursive bool) error {
