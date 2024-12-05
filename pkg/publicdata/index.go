@@ -51,6 +51,9 @@ func (e *indexer) UpdateIndexFile(ctx context.Context, prefix string, recursive 
 			continue
 		}
 		name := strings.TrimPrefix(obj.Key, prefix)
+		if strings.HasPrefix(name, "index.") {
+			continue
+		}
 		sb.WriteString("<li><a href=\"")
 		sb.WriteString(name)
 		sb.WriteString("\">")
@@ -62,6 +65,9 @@ func (e *indexer) UpdateIndexFile(ctx context.Context, prefix string, recursive 
 		}
 		files = append(files, name)
 	}
+
+	sb.WriteString("<li><a href=\"index.html\">index.html</a></li>\n")
+	sb.WriteString("<li><a href=\"index.json\">index.json</a></li>\n")
 
 	sb.WriteString("</ul>\n")
 	sb.WriteString("</body>\n")
