@@ -28,8 +28,8 @@ func NewExporter(storage *minio.Client, bucketName string, db *sql.DB) *indexer 
 }
 
 type fileInfo struct {
-	name string `json:"name"`
-	size int64  `json:"size,omitempty"`
+	Name string `json:"name"`
+	Size int64  `json:"size,omitempty"`
 }
 
 func (e *indexer) UpdateIndexFile(ctx context.Context, prefix string, recursive bool) error {
@@ -86,7 +86,7 @@ func (e *indexer) UpdateIndexFile(ctx context.Context, prefix string, recursive 
 		if strings.HasSuffix(obj.Key, "/") && recursive {
 			e.UpdateIndexFile(ctx, obj.Key, recursive)
 		}
-		files = append(files, fileInfo{name: name, size: obj.Size})
+		files = append(files, fileInfo{Name: name, Size: obj.Size})
 	}
 
 	sb.WriteString("<li><a href=\"index.html\">index.html</a></li>\n")
