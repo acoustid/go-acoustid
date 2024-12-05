@@ -53,6 +53,7 @@ func (f *storageFlags) Flags() []cli.Flag {
 		f.Endpoint,
 		f.AccessKeyId,
 		f.SecretAccessKey,
+		f.UseSSL,
 	}
 }
 
