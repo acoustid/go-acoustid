@@ -27,7 +27,6 @@ type exporter struct {
 	storage    *minio.Client
 	bucketName string
 	tables     []exporterTableInfo
-	maxDays    int
 }
 
 func (ex *exporter) AddTable(name string, query string, delta bool) {
@@ -193,8 +192,15 @@ func (ex *exporter) Run(ctx context.Context) error {
 	changedFolders := make(map[string]struct{})
 
 	now := time.Now()
-	endTime := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
-	for i := 0; i < ex.maxDays; i++ {
+	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+
+	var maxDays = 7
+	if today.Day() == 1 {
+		maxDays = 32
+	}
+
+	endTime := today
+	for i := 0; i < maxDays; i++ {
 		startTime := endTime.AddDate(0, 0, -1)
 		err := ex.ExportDeltaFiles(ctx, startTime, endTime, changedFolders)
 		if err != nil {
@@ -214,8 +220,8 @@ func (ex *exporter) Run(ctx context.Context) error {
 	return nil
 }
 
-func ExportDataFiles(ctx context.Context, storage *minio.Client, bucketName string, db *sql.DB, maxDays int) error {
-	ex := &exporter{db: db, storage: storage, bucketName: bucketName, maxDays: maxDays}
+func ExportDataFiles(ctx context.Context, storage *minio.Client, bucketName string, db *sql.DB) error {
+	ex := &exporter{db: db, storage: storage, bucketName: bucketName}
 	ex.AddTable("fingerprint-update", ExportFingerprintUpdateQuery, true)
 	ex.AddTable("meta-update", ExportMetaUpdateQuery, true)
 	ex.AddTable("track-update", ExportTrackUpdateQuery, true)

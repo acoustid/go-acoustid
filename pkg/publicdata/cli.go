@@ -90,7 +90,7 @@ func NewExportCommand() *cli.Command {
 			}
 			defer db.Close()
 
-			return ExportDataFiles(c.Context, storage, bucketName, db, 7)
+			return ExportDataFiles(c.Context, storage, bucketName, db)
 		},
 	}
 	return cmd
