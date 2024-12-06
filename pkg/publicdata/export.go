@@ -77,6 +77,10 @@ func (ex *exporter) ExportQuery(ctx context.Context, path string, query string) 
 		if err != nil {
 			return err
 		}
+		_, err = gzipFile.Write([]byte("\n"))
+		if err != nil {
+			return err
+		}
 	}
 
 	err = gzipFile.Close()
