@@ -23,20 +23,23 @@ var ErrTxActive = errors.New("another transaction is still active")
 
 var ErrInvalidResultFormat = errors.New("invalid format of search results")
 
-func DecodeResults(encoded string) ([]*pb.Result, error) {
+func DecodeResults(logger *zerolog.Logger, encoded string) ([]*pb.Result, error) {
 	items := strings.Split(encoded, " ")
 	results := make([]*pb.Result, len(items))
 	for i, item := range items {
 		fields := strings.Split(item, ":")
 		if len(fields) != 2 {
+			logger.Error().Str("value", encoded).Msgf("error parsing search results")
 			return nil, ErrInvalidResultFormat
 		}
 		id, err := strconv.ParseUint(fields[0], 10, 32)
 		if err != nil {
+			logger.Error().Str("value", encoded).Msgf("error parsing search results")
 			return nil, ErrInvalidResultFormat
 		}
 		hits, err := strconv.ParseUint(fields[1], 10, 32)
 		if err != nil {
+			logger.Error().Str("value", encoded).Msgf("error parsing search results")
 			return nil, ErrInvalidResultFormat
 		}
 		results[i] = &pb.Result{
@@ -220,6 +223,8 @@ func (c *IndexClient) SetAttribute(ctx context.Context, name string, value strin
 }
 
 func (c *IndexClient) Search(ctx context.Context, in *pb.SearchRequest) (*pb.SearchResponse, error) {
+	logger := zerolog.Ctx(ctx)
+
 	out := &pb.SearchResponse{}
 
 	response, err := c.sendRequest(ctx, fmt.Sprintf("search %s", EncodeFingerprint(in.GetHashes(), false)))
@@ -227,7 +232,7 @@ func (c *IndexClient) Search(ctx context.Context, in *pb.SearchRequest) (*pb.Sea
 		return nil, err
 	}
 
-	results, err := DecodeResults(response)
+	results, err := DecodeResults(logger, response)
 	if err != nil {
 		return nil, err
 	}
