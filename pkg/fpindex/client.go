@@ -24,6 +24,9 @@ var ErrTxActive = errors.New("another transaction is still active")
 var ErrInvalidResultFormat = errors.New("invalid format of search results")
 
 func DecodeResults(logger *zerolog.Logger, encoded string) ([]*pb.Result, error) {
+	if len(encoded) == 0 {
+		return nil, nil
+	}
 	items := strings.Split(encoded, " ")
 	results := make([]*pb.Result, len(items))
 	for i, item := range items {
