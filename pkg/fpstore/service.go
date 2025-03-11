@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base32"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -270,8 +271,13 @@ func (s *FingerprintStoreService) Search(ctx context.Context, req *pb.SearchFing
 
 	candidateIds, err := s.index.Search(ctx, req.Fingerprint, maxCandidateIds)
 	if err != nil {
-		logger.Err(err).Msg("failed to search index")
-		return nil, status.Error(codes.Internal, "failed to search index")
+		if os.IsTimeout(err) {
+			logger.Warn().Err(err).Msg("timeout while searching index")
+			return nil, status.Error(codes.DeadlineExceeded, "timeout while searching index")
+		} else {
+			logger.Err(err).Msg("failed to search index")
+			return nil, status.Error(codes.Internal, "failed to search index")
+		}
 	}
 
 	logger.Debug().Int("candidates", len(candidateIds)).Msg("received candidates")
