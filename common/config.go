@@ -22,11 +22,13 @@ func ConcatFlags(slices ...[]cli.Flag) []cli.Flag {
 }
 
 type DatabaseCliFlags struct {
-	Database *cli.StringFlag
-	Host     *cli.StringFlag
-	Port     *cli.IntFlag
-	User     *cli.StringFlag
-	Password *cli.StringFlag
+	Database    *cli.StringFlag
+	Host        *cli.StringFlag
+	Port        *cli.IntFlag
+	User        *cli.StringFlag
+	Password    *cli.StringFlag
+	SSLMode     *cli.StringFlag
+	SSLRootCert *cli.StringFlag
 }
 
 func NewDatabaseCliFlags(prefix string, envPrefix string) *DatabaseCliFlags {
@@ -56,6 +58,17 @@ func NewDatabaseCliFlags(prefix string, envPrefix string) *DatabaseCliFlags {
 			Usage:   "Database password",
 			EnvVars: []string{envPrefix + "PASSWORD"},
 		},
+		SSLMode: &cli.StringFlag{
+			Name:    prefix + "sslmode",
+			Usage:   "Database TLS mode (disable, allow, prefer, require, verify-ca, verify-full)",
+			Value:   "disable",
+			EnvVars: []string{envPrefix + "SSLMODE"},
+		},
+		SSLRootCert: &cli.StringFlag{
+			Name:    prefix + "sslrootcert",
+			Usage:   "Path to the CA certificate used to verify the database server",
+			EnvVars: []string{envPrefix + "SSLROOTCERT"},
+		},
 	}
 }
 
@@ -66,6 +79,8 @@ func (f *DatabaseCliFlags) Flags() []cli.Flag {
 		f.Port,
 		f.User,
 		f.Password,
+		f.SSLMode,
+		f.SSLRootCert,
 	}
 }
 
@@ -76,15 +91,19 @@ func (f *DatabaseCliFlags) Config(c *cli.Context) *DatabaseConfig {
 	cfg.Port = f.Port.Get(c)
 	cfg.User = f.User.Get(c)
 	cfg.Password = f.Password.Get(c)
+	cfg.SSLMode = f.SSLMode.Get(c)
+	cfg.SSLRootCert = f.SSLRootCert.Get(c)
 	return cfg
 }
 
 type DatabaseConfig struct {
-	Database string
-	Host     string
-	Port     int
-	User     string
-	Password string
+	Database    string
+	Host        string
+	Port        int
+	User        string
+	Password    string
+	SSLMode     string
+	SSLRootCert string
 }
 
 func NewDatabaseConfig() *DatabaseConfig {
@@ -94,6 +113,7 @@ func NewDatabaseConfig() *DatabaseConfig {
 		Port:     5432,
 		User:     "acoustid",
 		Password: "acoustid",
+		SSLMode:  "disable",
 	}
 }
 
@@ -116,7 +136,14 @@ func (cfg *DatabaseConfig) URL() *url.URL {
 	u.Host = net.JoinHostPort(cfg.Host, strconv.Itoa(cfg.Port))
 	u.Path = fmt.Sprintf("/%s", cfg.Database)
 	params := url.Values{}
-	params.Add("sslmode", "disable")
+	sslMode := cfg.SSLMode
+	if sslMode == "" {
+		sslMode = "disable"
+	}
+	params.Add("sslmode", sslMode)
+	if cfg.SSLRootCert != "" {
+		params.Add("sslrootcert", cfg.SSLRootCert)
+	}
 	u.RawQuery = params.Encode()
 	return &u
 }
@@ -150,5 +177,13 @@ func (cfg *DatabaseConfig) readEnv(prefix string) {
 	password := os.Getenv(prefix + "PASSWORD")
 	if password != "" {
 		cfg.Password = password
+	}
+	sslMode := os.Getenv(prefix + "SSLMODE")
+	if sslMode != "" {
+		cfg.SSLMode = sslMode
+	}
+	sslRootCert := os.Getenv(prefix + "SSLROOTCERT")
+	if sslRootCert != "" {
+		cfg.SSLRootCert = sslRootCert
 	}
 }

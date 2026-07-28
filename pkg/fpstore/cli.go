@@ -50,6 +50,19 @@ var PostgresDatabase = cli.StringFlag{
 	EnvVars: []string{"FPSTORE_POSTGRES_DATABASE"},
 }
 
+var PostgresSSLMode = cli.StringFlag{
+	Name:    "postgres-sslmode",
+	Usage:   "Postgres TLS mode (disable, allow, prefer, require, verify-ca, verify-full)",
+	Value:   "disable",
+	EnvVars: []string{"FPSTORE_POSTGRES_SSLMODE"},
+}
+
+var PostgresSSLRootCert = cli.StringFlag{
+	Name:    "postgres-sslrootcert",
+	Usage:   "Path to the CA certificate used to verify the Postgres server",
+	EnvVars: []string{"FPSTORE_POSTGRES_SSLROOTCERT"},
+}
+
 var RedisHostFlag = cli.StringFlag{
 	Name:    "redis-host",
 	Usage:   "Redis server address",
@@ -165,6 +178,8 @@ func PrepareFingerprintStore(c *cli.Context) (FingerprintStore, error) {
 	config.User = c.String(PostgresUser.Name)
 	config.Password = c.String(PostgresPassword.Name)
 	config.Database = c.String(PostgresDatabase.Name)
+	config.SSLMode = c.String(PostgresSSLMode.Name)
+	config.SSLRootCert = c.String(PostgresSSLRootCert.Name)
 
 	db, err := config.Connect()
 	if err != nil {
@@ -226,6 +241,8 @@ func BuildCli() *cli.Command {
 			&PostgresUser,
 			&PostgresPassword,
 			&PostgresDatabase,
+			&PostgresSSLMode,
+			&PostgresSSLRootCert,
 			&RedisHostFlag,
 			&RedisPortFlag,
 			&RedisPasswordFlag,
