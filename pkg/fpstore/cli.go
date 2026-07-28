@@ -52,7 +52,7 @@ var PostgresDatabase = cli.StringFlag{
 
 var PostgresSSLMode = cli.StringFlag{
 	Name:    "postgres-sslmode",
-	Usage:   "Postgres TLS mode (disable, allow, prefer, require, verify-ca, verify-full)",
+	Usage:   "Postgres TLS mode (disable, require, verify-ca, verify-full)",
 	Value:   "disable",
 	EnvVars: []string{"FPSTORE_POSTGRES_SSLMODE"},
 }

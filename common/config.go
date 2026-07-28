@@ -60,7 +60,7 @@ func NewDatabaseCliFlags(prefix string, envPrefix string) *DatabaseCliFlags {
 		},
 		SSLMode: &cli.StringFlag{
 			Name:    prefix + "sslmode",
-			Usage:   "Database TLS mode (disable, allow, prefer, require, verify-ca, verify-full)",
+			Usage:   "Database TLS mode (disable, require, verify-ca, verify-full)",
 			Value:   "disable",
 			EnvVars: []string{envPrefix + "SSLMODE"},
 		},
@@ -149,6 +149,14 @@ func (cfg *DatabaseConfig) URL() *url.URL {
 }
 
 func (cfg *DatabaseConfig) Connect() (*sql.DB, error) {
+	// lib/pq silently ignores an unreadable sslrootcert under sslmode=require
+	// and carries on without verifying the server, so check it here rather
+	// than let a mistyped path quietly become an unverified connection.
+	if cfg.SSLRootCert != "" {
+		if _, err := os.Stat(cfg.SSLRootCert); err != nil {
+			return nil, fmt.Errorf("cannot read sslrootcert %q: %w", cfg.SSLRootCert, err)
+		}
+	}
 	url := cfg.URL().String()
 	log.Info().Msgf("Connecting to PostgreSQL at %s:%d using database %s", cfg.Host, cfg.Port, cfg.Database)
 	return sql.Open("postgres", url)

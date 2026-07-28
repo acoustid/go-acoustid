@@ -53,6 +53,19 @@ var DatabasePasswordFlag = cli.StringFlag{
 	EnvVars: []string{"ACOUSTID_DATABASE_PASSWORD"},
 }
 
+var DatabaseSSLModeFlag = cli.StringFlag{
+	Name:    "database-sslmode",
+	Usage:   "database TLS mode (disable, require, verify-ca, verify-full)",
+	Value:   "disable",
+	EnvVars: []string{"ACOUSTID_DATABASE_SSLMODE"},
+}
+
+var DatabaseSSLRootCertFlag = cli.StringFlag{
+	Name:    "database-sslrootcert",
+	Usage:   "path to the CA certificate used to verify the database server",
+	EnvVars: []string{"ACOUSTID_DATABASE_SSLROOTCERT"},
+}
+
 func PrepareAndRunUpdater(c *cli.Context) error {
 	cfg := NewUpdaterConfig()
 
@@ -66,6 +79,8 @@ func PrepareAndRunUpdater(c *cli.Context) error {
 	cfg.Database.Port = c.Int("database-port")
 	cfg.Database.User = c.String("database-username")
 	cfg.Database.Password = c.String("database-password")
+	cfg.Database.SSLMode = c.String("database-sslmode")
+	cfg.Database.SSLRootCert = c.String("database-sslrootcert")
 
 	RunUpdater(cfg)
 	return nil
@@ -82,6 +97,8 @@ var UpdaterCommand = &cli.Command{
 		&DatabasePortFlag,
 		&DatabaseUsernameFlag,
 		&DatabasePasswordFlag,
+		&DatabaseSSLModeFlag,
+		&DatabaseSSLRootCertFlag,
 	},
 	Action: PrepareAndRunUpdater,
 }
