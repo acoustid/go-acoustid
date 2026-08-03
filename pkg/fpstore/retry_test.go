@@ -157,13 +157,14 @@ func TestGetGivesUpAfterMaxAttempts(t *testing.T) {
 	assert.Equal(t, maxDatabaseAttempts, script.queries)
 }
 
-func TestDeleteRetriesAfterSeveredConnection(t *testing.T) {
-	// The first statement is the v1 existence check; the DELETE is the second.
-	script := &scriptedDB{errs: []error{nil, severedConnection()}, value: int64(0)}
+func TestDeleteRetriesTheExistenceCheckButNotTheDelete(t *testing.T) {
+	// The first statement is the v1 existence check, the DELETE is the second.
+	// Only the check is retried; a write is left to fail.
+	script := &scriptedDB{errs: []error{severedConnection(), nil, severedConnection()}, value: int64(0)}
 	store := NewPostgresFingerprintStore(script.open())
 
-	require.NoError(t, store.Delete(context.Background(), 1))
-	assert.Equal(t, 3, script.queries, "the DELETE should have been attempted twice")
+	require.Error(t, store.Delete(context.Background(), 1))
+	assert.Equal(t, 3, script.queries, "the check should have been retried, the DELETE not")
 }
 
 func TestRetryOnConnectionErrorStopsWhenContextIsDone(t *testing.T) {

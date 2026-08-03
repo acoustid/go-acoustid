@@ -53,10 +53,7 @@ func (s *PostgresFingerprintStore) Delete(ctx context.Context, id uint64) error 
 	if existsAsV1 {
 		return ErrCannotDeleteLegacyFingerprint
 	}
-	err = retryOnConnectionError(ctx, func() error {
-		_, err := s.db.ExecContext(ctx, "DELETE FROM fingerprint_v2 WHERE id = $1", id)
-		return err
-	})
+	_, err = s.db.ExecContext(ctx, "DELETE FROM fingerprint_v2 WHERE id = $1", id)
 	return err
 }
 
