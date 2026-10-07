@@ -33,6 +33,9 @@ func (s *PostgresFingerprintStore) Insert(ctx context.Context, fp *pb.Fingerprin
 		return 0, err
 	}
 	var id uint64
+	// Deliberately not retried: a connection that dies after the INSERT commits
+	// but before we read the reply is indistinguishable from one that dies
+	// before it, so a second attempt risks storing the fingerprint twice.
 	err = s.db.QueryRowContext(ctx, "INSERT INTO fingerprint_v2 (data) VALUES ($1) RETURNING id", data).Scan(&id)
 	if err != nil {
 		return 0, err
@@ -56,7 +59,10 @@ func (s *PostgresFingerprintStore) Delete(ctx context.Context, id uint64) error 
 
 func (s *PostgresFingerprintStore) checkV1(ctx context.Context, id uint64) (bool, error) {
 	var count int
-	err := s.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM fingerprint WHERE id = $1", id).Scan(&count)
+	err := retryOnConnectionError(ctx, func() error {
+		count = 0
+		return s.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM fingerprint WHERE id = $1", id).Scan(&count)
+	})
 	if err != nil {
 		return false, err
 	}
@@ -66,12 +72,15 @@ func (s *PostgresFingerprintStore) checkV1(ctx context.Context, id uint64) (bool
 func (s *PostgresFingerprintStore) getV1(ctx context.Context, id uint64) (*pb.Fingerprint, error) {
 	var hashes fingerprint_db.Uint32Array
 	query := "SELECT fingerprint FROM fingerprint WHERE id = $1"
-	err := s.db.QueryRowContext(ctx, query, id).Scan(&hashes)
+	err := retryOnConnectionError(ctx, func() error {
+		hashes = nil
+		return s.db.QueryRowContext(ctx, query, id).Scan(&hashes)
+	})
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
 		}
-		log.Warn().Err(err).Msg("failed to get fingerprint from v2 table")
+		log.Warn().Err(err).Msg("failed to get fingerprint from v1 table")
 		return nil, err
 	}
 	return &pb.Fingerprint{Version: 1, Hashes: hashes}, nil
@@ -80,12 +89,15 @@ func (s *PostgresFingerprintStore) getV1(ctx context.Context, id uint64) (*pb.Fi
 func (s *PostgresFingerprintStore) getV2(ctx context.Context, id uint64) (*pb.Fingerprint, error) {
 	var data []byte
 	query := "SELECT data FROM fingerprint_v2 WHERE id = $1"
-	err := s.db.QueryRowContext(ctx, query, id).Scan(&data)
+	err := retryOnConnectionError(ctx, func() error {
+		data = nil
+		return s.db.QueryRowContext(ctx, query, id).Scan(&data)
+	})
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
 		}
-		log.Warn().Err(err).Msg("failed to get fingerprint from v1 table")
+		log.Warn().Err(err).Msg("failed to get fingerprint from v2 table")
 		return nil, err
 	}
 	return DecodeFingerprint(data)
