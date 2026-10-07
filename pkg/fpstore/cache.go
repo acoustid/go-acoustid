@@ -8,6 +8,7 @@ import (
 	pb "github.com/acoustid/go-acoustid/proto/fpstore"
 	"github.com/pkg/errors"
 	"github.com/redis/go-redis/v9"
+	"github.com/rs/zerolog"
 )
 
 type FingerprintCache interface {
@@ -46,15 +47,41 @@ func (c *RedisFingerprintCache) GetMulti(ctx context.Context, ids []uint64) (map
 		return nil, errors.WithMessagef(err, "failed to get %v fingerprints from cache", len(keys))
 	}
 	fpMap := make(map[uint64]*pb.Fingerprint, len(ids))
+	var failed int
+	var reason string
 	for i, value := range values {
 		if value == nil {
 			continue
 		}
-		fp, err := DecodeFingerprint([]byte(value.(string)))
+		// A key whose shard could not be reached arrives as a per-key error
+		// reply, which go-redis stores in the slice as the value while
+		// reporting no error for the command itself. Asserting it to a string
+		// without checking panicked, and a panic in a gRPC handler is the
+		// process rather than the request. A cache that cannot answer is a
+		// cache miss.
+		data, ok := value.(string)
+		if !ok {
+			failed++
+			if reason == "" {
+				reason = fmt.Sprintf("%v (%T)", value, value)
+			}
+			continue
+		}
+		fp, err := DecodeFingerprint([]byte(data))
 		if err != nil {
 			return nil, errors.WithMessage(err, "failed to unmarshal fingerprint data")
 		}
 		fpMap[ids[i]] = fp
+	}
+	if failed > 0 {
+		// Once per call, not per key, so an outage does not trade a crash for
+		// a log flood. These ids are counted as ordinary cache misses
+		// upstream, so this line is the only sign the cache itself is unwell.
+		zerolog.Ctx(ctx).Warn().
+			Int("failed", failed).
+			Int("requested", len(keys)).
+			Str("reason", reason).
+			Msg("cache could not answer some keys, treating them as misses")
 	}
 	return fpMap, nil
 }
